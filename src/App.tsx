@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { cn } from "./lib/utils";
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type Role = "CLIENT" | "PROFESSIONAL";
 type BookingStatus = "PENDING" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
-type PaymentMethod = "CARD" | "YAPE" | "BANK_TRANSFER";
 type View = "auth" | "map" | "bookings" | "chat" | "profile" | "professionals";
 
 interface AuthResponse { token: string; userId: number; name: string; email: string; role: Role; }
@@ -15,7 +16,6 @@ interface Notif { id: number; title: string; body: string; type: string; isRead:
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 const BASE = "http://localhost:8081";
-
 function getToken() { return localStorage.getItem("sl_token"); }
 
 async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
@@ -41,7 +41,6 @@ const api = {
   register: (data: object) => request<AuthResponse>("/api/auth/register", { method: "POST", body: JSON.stringify(data) }),
   me: () => request<User>("/api/users/me"),
   professionals: (lat: number, lon: number, r = 10) => request<Professional[]>(`/api/professionals/nearby?lat=${lat}&lon=${lon}&radius=${r}`),
-  profById: (id: number) => request<Professional>(`/api/professionals/${id}`),
   categories: () => request<{ id: number; name: string }[]>("/api/categories"),
   myBookings: () => request<Booking[]>("/api/bookings/my"),
   createBooking: (data: object) => request<Booking>("/api/bookings", { method: "POST", body: JSON.stringify(data) }),
@@ -56,9 +55,12 @@ const api = {
 };
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-const STATUS_COLORS: Record<BookingStatus, string> = {
-  PENDING: "#f59e0b", CONFIRMED: "#3b82f6", IN_PROGRESS: "#8b5cf6",
-  COMPLETED: "#10b981", CANCELLED: "#ef4444",
+const STATUS_BADGE: Record<BookingStatus, string> = {
+  PENDING:     "badge-warning",
+  CONFIRMED:   "badge-info",
+  IN_PROGRESS: "badge-secondary",
+  COMPLETED:   "badge-success",
+  CANCELLED:   "badge-error",
 };
 const STATUS_LABELS: Record<BookingStatus, string> = {
   PENDING: "Pendiente", CONFIRMED: "Confirmado", IN_PROGRESS: "En progreso",
@@ -71,63 +73,41 @@ function fmt(dateStr: string) {
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <span style={{ color: "#f59e0b", letterSpacing: 1 }}>
+    <span className="text-yellow-400 tracking-wide text-sm">
       {"★".repeat(Math.round(rating))}{"☆".repeat(5 - Math.round(rating))}
     </span>
   );
 }
 
-function Avatar({ name, url, size = 36 }: { name: string; url?: string; size?: number }) {
+function Avatar({ name, url, size = "md" }: { name: string; url?: string; size?: "sm" | "md" | "lg" | "xl" }) {
+  const sizeClass = { sm: "w-7 h-7 text-xs", md: "w-9 h-9 text-sm", lg: "w-13 h-13 text-base", xl: "w-18 h-18 text-xl" }[size];
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-  if (url) return <img src={url} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover" }} />;
-  const colors = ["#6366f1", "#ec4899", "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6"];
+  const colors = ["bg-indigo-500", "bg-pink-500", "bg-teal-500", "bg-amber-500", "bg-red-500", "bg-violet-500"];
   const color = colors[name.charCodeAt(0) % colors.length];
+
+  if (url) return <img src={url} alt={name} className={cn("rounded-full object-cover flex-shrink-0", sizeClass)} />;
   return (
-    <div style={{ width: size, height: size, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: size * 0.38, flexShrink: 0 }}>
+    <div className={cn("rounded-full flex items-center justify-center text-white font-bold flex-shrink-0", sizeClass, color)}>
       {initials}
     </div>
   );
 }
 
-// ─── GLOBAL STYLES ────────────────────────────────────────────────────────────
-const STYLE = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0c0d14; --surface: #13141f; --card: #1a1b2e; --border: #252640;
-    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b;
-    --text: #e8e9f3; --muted: #6b6d8a; --success: #10b981; --danger: #ef4444;
-    --warn: #f59e0b;
-  }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
-  input, textarea, select {
-    font-family: inherit; background: var(--surface); color: var(--text);
-    border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px;
-    font-size: 14px; width: 100%; outline: none; transition: border-color .2s;
-  }
-  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
-  button { font-family: inherit; cursor: pointer; border: none; outline: none; }
-  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+// ─── MOTION VARIANTS ─────────────────────────────────────────────────────────
+const fadeUp = {
+  hidden: { opacity: 0, y: 10 },
+  show:   { opacity: 1, y: 0, transition: { duration: 0.25, ease: "easeOut" } },
+  exit:   { opacity: 0, y: -6, transition: { duration: 0.15 } },
+};
 
-  .sl-btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px;
-    transition: all .2s; white-space: nowrap;
-  }
-  .sl-btn-primary { background: var(--accent); color: #fff; }
-  .sl-btn-primary:hover { background: #5a52e8; transform: translateY(-1px); }
-  .sl-btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .sl-btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-  .sl-btn-danger { background: var(--danger); color: #fff; }
-  .sl-btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
-  .sl-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; }
-  .sl-badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: .5px; }
-  .fade-in { animation: fadeIn .3s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-  .pulse { animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
-`;
+const stagger = {
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const cardHover = {
+  rest:  { scale: 1, borderColor: "rgba(37,38,64,1)" },
+  hover: { scale: 1.01, borderColor: "rgba(108,99,255,0.6)", transition: { duration: 0.2 } },
+};
 
 // ─── AUTH PAGE ────────────────────────────────────────────────────────────────
 function AuthPage({ onLogin }: { onLogin: (d: AuthResponse) => void }) {
@@ -153,70 +133,86 @@ function AuthPage({ onLogin }: { onLogin: (d: AuthResponse) => void }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "radial-gradient(ellipse at 30% 20%, #1a1040 0%, var(--bg) 60%)" }}>
-      <div style={{ width: "100%", maxWidth: 420 }}>
+    <div className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: "radial-gradient(ellipse at 30% 20%, #1a1040 0%, #0c0d14 60%)" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-sm"
+      >
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>🔗</div>
-          <h1 style={{ fontFamily: "Syne, sans-serif", fontSize: 32, fontWeight: 800, background: "linear-gradient(135deg, #6c63ff, #ff6584)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+            className="text-5xl mb-3"
+          >🔗</motion.div>
+          <h1 className="text-4xl font-black" style={{ fontFamily: "var(--font-display)", background: "linear-gradient(135deg, #6c63ff, #ff6584)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             ServiLink
           </h1>
-          <p style={{ color: "var(--muted)", marginTop: 4, fontSize: 14 }}>Servicios domésticos · Lima, Perú</p>
+          <p className="text-[var(--muted)] text-sm mt-1">Servicios domésticos · Lima, Perú</p>
         </div>
 
-        <div className="sl-card" style={{ padding: 32 }}>
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 4, background: "var(--surface)", borderRadius: 12, padding: 4, marginBottom: 28 }}>
-            {(["login", "register"] as const).map(m => (
-              <button key={m} onClick={() => setMode(m)} className="sl-btn" style={{ flex: 1, background: mode === m ? "var(--accent)" : "transparent", color: mode === m ? "#fff" : "var(--muted)", borderRadius: 9, padding: "8px 0", fontSize: 13 }}>
-                {m === "login" ? "Iniciar sesión" : "Registrarse"}
-              </button>
-            ))}
+        <div className="card bg-[var(--card)] border border-[var(--border)] shadow-2xl">
+          <div className="card-body gap-5">
+            {/* Tabs */}
+            <div className="tabs tabs-box bg-[var(--surface)] rounded-xl p-1">
+              {(["login", "register"] as const).map(m => (
+                <button key={m} onClick={() => setMode(m)}
+                  className={cn("tab flex-1 rounded-lg text-sm font-semibold transition-all", mode === m && "tab-active bg-[var(--accent)] text-white")}>
+                  {m === "login" ? "Iniciar sesión" : "Registrarse"}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div key={mode} variants={fadeUp} initial="hidden" animate="show" exit="exit" className="flex flex-col gap-3">
+                {mode === "register" && (
+                  <>
+                    <input name="name" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Nombre completo" value={form.name} onChange={handle} />
+                    <input name="phone" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Teléfono" value={form.phone} onChange={handle} />
+                    <select name="role" value={form.role} onChange={handle} className="select select-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full">
+                      <option value="CLIENT">Cliente</option>
+                      <option value="PROFESSIONAL">Profesional</option>
+                    </select>
+                  </>
+                )}
+                <input name="email" type="email" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Email" value={form.email} onChange={handle} />
+                <input name="password" type="password" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Contraseña" value={form.password} onChange={handle} onKeyDown={e => e.key === "Enter" && submit()} />
+              </motion.div>
+            </AnimatePresence>
+
+            {error && <p className="text-error text-sm text-center">{error}</p>}
+
+            <button
+              className={cn("btn btn-primary w-full text-white", loading && "loading")}
+              onClick={submit} disabled={loading}
+              style={{ background: "var(--accent)", borderColor: "var(--accent)" }}
+            >
+              {loading ? "" : mode === "login" ? "Entrar" : "Crear cuenta"}
+            </button>
+
+            <p className="text-center text-xs text-[var(--muted)]">
+              Demo: carlos@servilink.pe / password123
+            </p>
           </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {mode === "register" && (
-              <>
-                <input name="name" placeholder="Nombre completo" value={form.name} onChange={handle} />
-                <input name="phone" placeholder="Teléfono" value={form.phone} onChange={handle} />
-                <select name="role" value={form.role} onChange={handle}>
-                  <option value="CLIENT">Cliente</option>
-                  <option value="PROFESSIONAL">Profesional</option>
-                </select>
-              </>
-            )}
-            <input name="email" type="email" placeholder="Email" value={form.email} onChange={handle} />
-            <input name="password" type="password" placeholder="Contraseña" value={form.password} onChange={handle} onKeyDown={e => e.key === "Enter" && submit()} />
-          </div>
-
-          {error && <p style={{ color: "var(--danger)", fontSize: 13, marginTop: 12, textAlign: "center" }}>{error}</p>}
-
-          <button className="sl-btn sl-btn-primary" style={{ width: "100%", marginTop: 20, padding: "12px 0", fontSize: 15 }} onClick={submit} disabled={loading}>
-            {loading ? "Cargando..." : mode === "login" ? "Entrar" : "Crear cuenta"}
-          </button>
-
-          <p style={{ textAlign: "center", fontSize: 12, color: "var(--muted)", marginTop: 20 }}>
-            Demo: carlos@servilink.pe / password123
-          </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
-// ─── MAP VIEW (Simulated Leaflet-like) ───────────────────────────────────────
+// ─── MAP VIEW ─────────────────────────────────────────────────────────────────
 function MapView({ auth }: { auth: AuthResponse }) {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [selected, setSelected] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<{ id: number; rating: number; comment: string; clientName: string }[]>([]);
-  const LAT = -12.0464; const LON = -77.0428;
 
   useEffect(() => {
-    api.professionals(LAT, LON, 20)
-      .then(setProfessionals)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    api.professionals(-12.0464, -77.0428, 20).then(setProfessionals).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -224,155 +220,149 @@ function MapView({ auth }: { auth: AuthResponse }) {
     api.reviews(selected.id).then(setReviews).catch(() => setReviews([]));
   }, [selected]);
 
-  // Simulated map with CSS positioning
-  const mapPins = professionals.map((p, i) => ({
-    ...p,
-    x: 20 + ((i * 73) % 75),
-    y: 15 + ((i * 47) % 65),
-  }));
+  const mapPins = professionals.map((p, i) => ({ ...p, x: 20 + ((i * 73) % 75), y: 15 + ((i * 47) % 65) }));
 
   return (
-    <div style={{ display: "flex", height: "100%", gap: 0 }}>
-      {/* Map area */}
-      <div style={{ flex: 1, position: "relative", background: "linear-gradient(135deg, #1a2035 0%, #0f1520 100%)", overflow: "hidden" }}>
-        {/* Grid pattern */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: .06 }}>
+    <div className="flex h-full">
+      {/* Mapa */}
+      <div className="flex-1 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #1a2035, #0f1520)" }}>
+        <svg className="absolute inset-0 w-full h-full opacity-5">
           <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#6c63ff" strokeWidth="1"/></pattern></defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
-
-        {/* Simulated roads */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: .15 }}>
+        <svg className="absolute inset-0 w-full h-full opacity-15">
           <line x1="0" y1="40%" x2="100%" y2="38%" stroke="#fff" strokeWidth="2"/>
           <line x1="0" y1="65%" x2="100%" y2="63%" stroke="#fff" strokeWidth="1.5"/>
           <line x1="30%" y1="0" x2="32%" y2="100%" stroke="#fff" strokeWidth="2"/>
           <line x1="70%" y1="0" x2="68%" y2="100%" stroke="#fff" strokeWidth="1.5"/>
         </svg>
 
-        {/* Location label */}
-        <div style={{ position: "absolute", top: 16, left: 16, background: "rgba(0,0,0,.5)", backdropFilter: "blur(8px)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 14px", fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--muted)] flex items-center gap-2">
           📍 Lima, Perú — Radio 20km
         </div>
 
-        {/* Pins */}
         {loading ? (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)" }}>
-            <span className="pulse">Cargando profesionales...</span>
+          <div className="absolute inset-0 flex items-center justify-center text-[var(--muted)] pulse">
+            Cargando profesionales...
           </div>
         ) : mapPins.map(p => (
-          <div key={p.id}
+          <motion.div key={p.id}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, delay: 0.05 }}
             onClick={() => setSelected(p)}
-            style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, cursor: "pointer", transform: "translate(-50%, -100%)", transition: "transform .2s", zIndex: selected?.id === p.id ? 10 : 1 }}>
-            <div style={{ background: selected?.id === p.id ? "var(--accent)" : "var(--card)", border: `2px solid ${selected?.id === p.id ? "var(--accent)" : "var(--border)"}`, borderRadius: 10, padding: "6px 10px", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", boxShadow: "0 4px 20px rgba(0,0,0,.5)", display: "flex", alignItems: "center", gap: 5 }}>
+            className="absolute cursor-pointer"
+            style={{ left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%, -100%)", zIndex: selected?.id === p.id ? 10 : 1 }}
+          >
+            <div className={cn(
+              "rounded-xl px-2.5 py-1.5 text-[11px] font-bold whitespace-nowrap shadow-xl flex items-center gap-1.5 border-2 transition-all",
+              selected?.id === p.id
+                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
+                : "bg-[var(--card)] border-[var(--border)] text-[var(--text)]"
+            )}>
               {p.isVerified ? "✅" : "👤"} {p.userName.split(" ")[0]}
-              <span style={{ color: "#f59e0b" }}>★{p.averageRating.toFixed(1)}</span>
+              <span className="text-yellow-400">★{p.averageRating.toFixed(1)}</span>
             </div>
-            <div style={{ width: 10, height: 10, background: selected?.id === p.id ? "var(--accent)" : "var(--border)", borderRadius: "50%", margin: "2px auto 0" }} />
-          </div>
+            <div className={cn("w-2.5 h-2.5 rounded-full mx-auto mt-0.5", selected?.id === p.id ? "bg-[var(--accent)]" : "bg-[var(--border)]")} />
+          </motion.div>
         ))}
 
-        {/* Center dot */}
-        <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)" }}>
-          <div style={{ width: 16, height: 16, background: "var(--accent2)", borderRadius: "50%", boxShadow: "0 0 0 4px rgba(255,101,132,.3)" }} />
+        {/* Centro */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <div className="w-4 h-4 bg-[var(--accent2)] rounded-full shadow-[0_0_0_6px_rgba(255,101,132,0.25)]" />
         </div>
       </div>
 
       {/* Sidebar */}
-      <div style={{ width: 340, borderLeft: "1px solid var(--border)", overflow: "auto", background: "var(--surface)" }}>
-        {selected ? (
-          <div className="fade-in" style={{ padding: 20 }}>
-            <button onClick={() => setSelected(null)} style={{ background: "none", color: "var(--muted)", fontSize: 13, marginBottom: 16, display: "flex", alignItems: "center", gap: 4 }}>
-              ← Volver
-            </button>
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 16 }}>
-              <Avatar name={selected.userName} url={selected.profilePictureUrl} size={52} />
-              <div style={{ flex: 1 }}>
-                <h3 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 16 }}>{selected.userName}</h3>
-                <p style={{ color: "var(--accent)", fontSize: 13, fontWeight: 600 }}>{selected.specialty}</p>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                  <Stars rating={selected.averageRating} />
-                  <span style={{ fontSize: 12, color: "var(--muted)" }}>{selected.averageRating.toFixed(1)} ({selected.totalReviews})</span>
-                  {selected.isVerified && <span className="sl-badge" style={{ background: "#10b98120", color: "#10b981" }}>✓ Verificado</span>}
+      <div className="w-80 border-l border-[var(--border)] overflow-auto bg-[var(--surface)]">
+        <AnimatePresence mode="wait">
+          {selected ? (
+            <motion.div key="detail" variants={fadeUp} initial="hidden" animate="show" exit="exit" className="p-5">
+              <button onClick={() => setSelected(null)} className="btn btn-ghost btn-sm text-[var(--muted)] mb-4">← Volver</button>
+              <div className="flex gap-3 items-start mb-4">
+                <Avatar name={selected.userName} url={selected.profilePictureUrl} size="lg" />
+                <div className="flex-1">
+                  <h3 className="font-bold text-base" style={{ fontFamily: "var(--font-display)" }}>{selected.userName}</h3>
+                  <p className="text-[var(--accent)] text-sm font-semibold">{selected.specialty}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Stars rating={selected.averageRating} />
+                    <span className="text-xs text-[var(--muted)]">{selected.averageRating.toFixed(1)} ({selected.totalReviews})</span>
+                    {selected.isVerified && <span className="badge badge-success badge-xs">✓ Verificado</span>}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {selected.description && <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6, marginBottom: 16 }}>{selected.description}</p>}
+              {selected.description && <p className="text-sm text-[var(--muted)] leading-relaxed mb-4">{selected.description}</p>}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-              {[
-                { label: "Tarifa base", value: `S/. ${selected.baseRate}/hr` },
-                { label: "Radio", value: `${selected.coverageRadiusKm ?? "?"} km` },
-                { label: "Distancia", value: selected.distanceKm ? `${selected.distanceKm.toFixed(1)} km` : "—" },
-                { label: "Teléfono", value: selected.userPhone ?? "—" },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ background: "var(--card)", borderRadius: 10, padding: "10px 12px" }}>
-                  <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{value}</div>
-                </div>
-              ))}
-            </div>
-
-            {selected.services.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>Servicios</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {selected.services.map(s => (
-                    <div key={s.id} style={{ background: "var(--card)", borderRadius: 10, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 13 }}>{s.name}</span>
-                      {s.referencePrice && <span style={{ fontWeight: 700, color: "var(--accent)", fontSize: 13 }}>S/. {s.referencePrice}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {reviews.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>Reseñas recientes</p>
-                {reviews.slice(0, 3).map(r => (
-                  <div key={r.id} style={{ background: "var(--card)", borderRadius: 10, padding: "10px 12px", marginBottom: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600 }}>{r.clientName}</span>
-                      <Stars rating={r.rating} />
-                    </div>
-                    {r.comment && <p style={{ fontSize: 12, color: "var(--muted)" }}>{r.comment}</p>}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {[
+                  { label: "Tarifa", value: `S/. ${selected.baseRate}/hr` },
+                  { label: "Radio", value: `${selected.coverageRadiusKm ?? "?"} km` },
+                  { label: "Distancia", value: selected.distanceKm ? `${selected.distanceKm.toFixed(1)} km` : "—" },
+                  { label: "Teléfono", value: selected.userPhone ?? "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-[var(--card)] rounded-xl p-3">
+                    <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{label}</div>
+                    <div className="font-bold text-sm">{value}</div>
                   </div>
                 ))}
               </div>
-            )}
 
-            <button className="sl-btn sl-btn-primary" style={{ width: "100%" }}>
-              📅 Reservar servicio
-            </button>
-          </div>
-        ) : (
-          <div style={{ padding: 20 }}>
-            <h2 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 18, marginBottom: 4 }}>Mapa de profesionales</h2>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-              {professionals.length} profesionales encontrados cerca de Lima
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {professionals.map(p => (
-                <div key={p.id} onClick={() => setSelected(p)} className="sl-card" style={{ padding: "12px 14px", cursor: "pointer", transition: "border-color .2s" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--accent)")}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Avatar name={p.userName} url={p.profilePictureUrl} size={36} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.userName}</div>
-                      <div style={{ fontSize: 11, color: "var(--accent)" }}>{p.specialty}</div>
-                    </div>
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b" }}>★ {p.averageRating.toFixed(1)}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)" }}>S/. {p.baseRate}/hr</div>
-                    </div>
+              {selected.services.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-2">Servicios</p>
+                  <div className="flex flex-col gap-1.5">
+                    {selected.services.map(s => (
+                      <div key={s.id} className="bg-[var(--card)] rounded-xl px-3 py-2 flex justify-between items-center">
+                        <span className="text-sm">{s.name}</span>
+                        {s.referencePrice && <span className="font-bold text-[var(--accent)] text-sm">S/. {s.referencePrice}</span>}
+                      </div>
+                    ))}
                   </div>
                 </div>
+              )}
+
+              {reviews.slice(0, 3).map(r => (
+                <div key={r.id} className="bg-[var(--card)] rounded-xl p-3 mb-2">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs font-semibold">{r.clientName}</span>
+                    <Stars rating={r.rating} />
+                  </div>
+                  {r.comment && <p className="text-xs text-[var(--muted)]">{r.comment}</p>}
+                </div>
               ))}
-            </div>
-          </div>
-        )}
+
+              <button className="btn w-full text-white mt-2" style={{ background: "var(--accent)", borderColor: "var(--accent)" }}>
+                📅 Reservar servicio
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div key="list" variants={fadeUp} initial="hidden" animate="show" exit="exit" className="p-5">
+              <h2 className="font-black text-lg mb-1" style={{ fontFamily: "var(--font-display)" }}>Mapa de profesionales</h2>
+              <p className="text-sm text-[var(--muted)] mb-4">{professionals.length} encontrados cerca de Lima</p>
+              <motion.div variants={stagger} initial="hidden" animate="show" className="flex flex-col gap-2">
+                {professionals.map(p => (
+                  <motion.div key={p.id} variants={fadeUp} whileHover="hover" initial="rest" animate="rest">
+                    <motion.div variants={cardHover} onClick={() => setSelected(p)}
+                      className="card bg-[var(--card)] border border-[var(--border)] cursor-pointer p-3">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={p.userName} url={p.profilePictureUrl} size="md" />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm truncate">{p.userName}</div>
+                          <div className="text-xs text-[var(--accent)]">{p.specialty}</div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-bold text-yellow-400">★ {p.averageRating.toFixed(1)}</div>
+                          <div className="text-xs text-[var(--muted)]">S/. {p.baseRate}/hr</div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -385,105 +375,109 @@ function BookingsView({ auth }: { auth: AuthResponse }) {
   const [selected, setSelected] = useState<Booking | null>(null);
   const [filter, setFilter] = useState<BookingStatus | "ALL">("ALL");
 
-  useEffect(() => {
-    api.myBookings().then(setBookings).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { api.myBookings().then(setBookings).catch(() => {}).finally(() => setLoading(false)); }, []);
 
   const filtered = filter === "ALL" ? bookings : bookings.filter(b => b.status === filter);
 
   return (
-    <div style={{ display: "flex", height: "100%", gap: 0 }}>
-      {/* List */}
-      <div style={{ width: 380, borderRight: "1px solid var(--border)", overflow: "auto", background: "var(--surface)" }}>
-        <div style={{ padding: "20px 20px 0" }}>
-          <h2 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 20, marginBottom: 16 }}>Mis Reservas</h2>
-          <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+    <div className="flex h-full">
+      <div className="w-96 border-r border-[var(--border)] overflow-auto bg-[var(--surface)]">
+        <div className="p-5 pb-0">
+          <h2 className="font-black text-xl mb-4" style={{ fontFamily: "var(--font-display)" }}>Mis Reservas</h2>
+          <div className="flex gap-1.5 flex-wrap mb-4">
             {(["ALL", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"] as const).map(s => (
-              <button key={s} onClick={() => setFilter(s)} style={{ background: filter === s ? "var(--accent)" : "var(--card)", color: filter === s ? "#fff" : "var(--muted)", border: "1px solid " + (filter === s ? "transparent" : "var(--border)"), borderRadius: 8, padding: "5px 10px", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              <button key={s} onClick={() => setFilter(s)}
+                className={cn("btn btn-xs rounded-lg", filter === s ? "btn-primary text-white" : "btn-ghost border border-[var(--border)] text-[var(--muted)]")}
+                style={filter === s ? { background: "var(--accent)", borderColor: "var(--accent)" } : {}}>
                 {s === "ALL" ? "Todas" : STATUS_LABELS[s]}
               </button>
             ))}
           </div>
         </div>
-        <div style={{ padding: "0 20px 20px" }}>
-          {loading ? <p className="pulse" style={{ color: "var(--muted)", textAlign: "center", padding: 40 }}>Cargando...</p>
-            : filtered.length === 0 ? <p style={{ color: "var(--muted)", textAlign: "center", padding: 40 }}>No hay reservas</p>
-            : filtered.map(b => (
-              <div key={b.id} onClick={() => setSelected(b)} className="sl-card" style={{ padding: "14px", marginBottom: 8, cursor: "pointer", borderColor: selected?.id === b.id ? "var(--accent)" : "var(--border)", transition: "border-color .2s" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{b.serviceName}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>con {b.professionalName}</div>
-                  </div>
-                  <span className="sl-badge" style={{ background: STATUS_COLORS[b.status] + "25", color: STATUS_COLORS[b.status] }}>
-                    {STATUS_LABELS[b.status]}
-                  </span>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", gap: 12 }}>
-                  <span>📅 {new Date(b.scheduledAt).toLocaleDateString("es-PE")}</span>
-                  <span>📍 {b.address.slice(0, 25)}...</span>
-                </div>
-              </div>
-            ))}
+        <div className="p-5 pt-0">
+          {loading ? <p className="text-[var(--muted)] text-center py-10 pulse">Cargando...</p>
+            : filtered.length === 0 ? <p className="text-[var(--muted)] text-center py-10">No hay reservas</p>
+            : (
+              <motion.div variants={stagger} initial="hidden" animate="show" className="flex flex-col gap-2">
+                {filtered.map(b => (
+                  <motion.div key={b.id} variants={fadeUp}>
+                    <motion.div whileHover={{ borderColor: "rgba(108,99,255,0.6)" }}
+                      onClick={() => setSelected(b)}
+                      className={cn("card bg-[var(--card)] border cursor-pointer p-3.5 transition-all",
+                        selected?.id === b.id ? "border-[var(--accent)]" : "border-[var(--border)]"
+                      )}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-bold text-sm">{b.serviceName}</div>
+                          <div className="text-xs text-[var(--muted)]">con {b.professionalName}</div>
+                        </div>
+                        <span className={cn("badge badge-sm", STATUS_BADGE[b.status])}>{STATUS_LABELS[b.status]}</span>
+                      </div>
+                      <div className="text-xs text-[var(--muted)] flex gap-3">
+                        <span>📅 {new Date(b.scheduledAt).toLocaleDateString("es-PE")}</span>
+                        <span className="truncate">📍 {b.address.slice(0, 20)}…</span>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
         </div>
       </div>
 
-      {/* Detail */}
-      <div style={{ flex: 1, overflow: "auto", padding: 32 }}>
-        {selected ? (
-          <div className="fade-in" style={{ maxWidth: 600 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 22 }}>Reserva #{selected.id}</h2>
-              <span className="sl-badge" style={{ background: STATUS_COLORS[selected.status] + "25", color: STATUS_COLORS[selected.status], fontSize: 13, padding: "6px 14px" }}>
-                {STATUS_LABELS[selected.status]}
-              </span>
-            </div>
+      <div className="flex-1 overflow-auto p-8">
+        <AnimatePresence mode="wait">
+          {selected ? (
+            <motion.div key={selected.id} variants={fadeUp} initial="hidden" animate="show" exit="exit" className="max-w-xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-black text-2xl" style={{ fontFamily: "var(--font-display)" }}>Reserva #{selected.id}</h2>
+                <span className={cn("badge badge-lg", STATUS_BADGE[selected.status])}>{STATUS_LABELS[selected.status]}</span>
+              </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
-              {[
-                { icon: "🔧", label: "Servicio", value: selected.serviceName },
-                { icon: "👤", label: "Profesional", value: selected.professionalName },
-                { icon: "📅", label: "Fecha programada", value: fmt(selected.scheduledAt) },
-                { icon: "📍", label: "Dirección", value: selected.address },
-                { icon: "👤", label: "Cliente", value: selected.clientName },
-                { icon: "🕐", label: "Creado", value: fmt(selected.createdAt) },
-              ].map(({ icon, label, value }) => (
-                <div key={label} className="sl-card" style={{ padding: "14px 16px" }}>
-                  <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>{icon} {label}</div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{value}</div>
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {[
+                  { icon: "🔧", label: "Servicio", value: selected.serviceName },
+                  { icon: "👤", label: "Profesional", value: selected.professionalName },
+                  { icon: "📅", label: "Fecha", value: fmt(selected.scheduledAt) },
+                  { icon: "📍", label: "Dirección", value: selected.address },
+                  { icon: "👤", label: "Cliente", value: selected.clientName },
+                  { icon: "🕐", label: "Creado", value: fmt(selected.createdAt) },
+                ].map(({ icon, label, value }) => (
+                  <div key={label} className="card bg-[var(--card)] border border-[var(--border)] p-3.5">
+                    <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{icon} {label}</div>
+                    <div className="font-semibold text-sm">{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {selected.description && (
+                <div className="card bg-[var(--card)] border border-[var(--border)] p-4 mb-6">
+                  <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-2">📝 Descripción</div>
+                  <p className="text-sm leading-relaxed">{selected.description}</p>
                 </div>
-              ))}
-            </div>
+              )}
 
-            {selected.description && (
-              <div className="sl-card" style={{ padding: "14px 16px", marginBottom: 24 }}>
-                <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 6 }}>📝 Descripción</div>
-                <p style={{ fontSize: 14, lineHeight: 1.6 }}>{selected.description}</p>
-              </div>
-            )}
-
-            {/* Status change buttons */}
-            {selected.status === "PENDING" && (
-              <div style={{ display: "flex", gap: 10 }}>
-                <button className="sl-btn sl-btn-primary" onClick={async () => {
-                  const upd = await api.updateBooking(selected.id, "CONFIRMED");
-                  setSelected(upd);
-                  setBookings(prev => prev.map(b => b.id === upd.id ? upd : b));
-                }}>✅ Confirmar</button>
-                <button className="sl-btn sl-btn-danger" onClick={async () => {
-                  const upd = await api.updateBooking(selected.id, "CANCELLED");
-                  setSelected(upd);
-                  setBookings(prev => prev.map(b => b.id === upd.id ? upd : b));
-                }}>❌ Cancelar</button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, color: "var(--muted)" }}>
-            <div style={{ fontSize: 48 }}>📋</div>
-            <p style={{ fontSize: 16 }}>Selecciona una reserva para ver detalles</p>
-          </div>
-        )}
+              {selected.status === "PENDING" && (
+                <div className="flex gap-3">
+                  <button className="btn btn-success text-white" onClick={async () => {
+                    const upd = await api.updateBooking(selected.id, "CONFIRMED");
+                    setSelected(upd); setBookings(prev => prev.map(b => b.id === upd.id ? upd : b));
+                  }}>✅ Confirmar</button>
+                  <button className="btn btn-error text-white" onClick={async () => {
+                    const upd = await api.updateBooking(selected.id, "CANCELLED");
+                    setSelected(upd); setBookings(prev => prev.map(b => b.id === upd.id ? upd : b));
+                  }}>❌ Cancelar</button>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div key="empty" variants={fadeUp} initial="hidden" animate="show"
+              className="h-full flex flex-col items-center justify-center gap-4 text-[var(--muted)]">
+              <div className="text-5xl">📋</div>
+              <p>Selecciona una reserva para ver detalles</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -499,12 +493,7 @@ function ChatView({ auth }: { auth: AuthResponse }) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { api.myBookings().then(setBookings).catch(() => {}); }, []);
-
-  useEffect(() => {
-    if (!selected) return;
-    api.messages(selected.id).then(setMessages).catch(() => {});
-  }, [selected]);
-
+  useEffect(() => { if (!selected) return; api.messages(selected.id).then(setMessages).catch(() => {}); }, [selected]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const send = async () => {
@@ -512,91 +501,107 @@ function ChatView({ auth }: { auth: AuthResponse }) {
     setSending(true);
     try {
       const msg = await api.sendMessage(selected.id, input.trim());
-      setMessages(prev => [...prev, msg]);
-      setInput("");
-    } catch { /* silent */ } finally { setSending(false); }
+      setMessages(prev => [...prev, msg]); setInput("");
+    } catch { /**/ } finally { setSending(false); }
   };
 
   return (
-    <div style={{ display: "flex", height: "100%", gap: 0 }}>
-      {/* Conversations list */}
-      <div style={{ width: 300, borderRight: "1px solid var(--border)", overflow: "auto", background: "var(--surface)" }}>
-        <div style={{ padding: "20px 20px 12px" }}>
-          <h2 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 18 }}>Chat</h2>
-          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>Conversaciones activas</p>
+    <div className="flex h-full">
+      {/* Lista conversaciones */}
+      <div className="w-72 border-r border-[var(--border)] overflow-auto bg-[var(--surface)]">
+        <div className="p-5 pb-3">
+          <h2 className="font-black text-lg" style={{ fontFamily: "var(--font-display)" }}>Chat</h2>
+          <p className="text-xs text-[var(--muted)] mt-1">Conversaciones activas</p>
         </div>
         {bookings.filter(b => b.status !== "CANCELLED").map(b => (
-          <div key={b.id} onClick={() => setSelected(b)} style={{ padding: "14px 20px", cursor: "pointer", borderBottom: "1px solid var(--border)", background: selected?.id === b.id ? "var(--card)" : "transparent", transition: "background .2s", borderLeft: selected?.id === b.id ? "3px solid var(--accent)" : "3px solid transparent" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Avatar name={b.professionalName} size={38} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.professionalName}</div>
-                <div style={{ fontSize: 11, color: "var(--muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{b.serviceName}</div>
+          <motion.div key={b.id} whileHover={{ backgroundColor: "rgba(26,27,46,0.8)" }}
+            onClick={() => setSelected(b)}
+            className={cn("px-5 py-3.5 cursor-pointer border-b border-[var(--border)] transition-all",
+              "border-l-2",
+              selected?.id === b.id ? "bg-[var(--card)] border-l-[var(--accent)]" : "border-l-transparent"
+            )}>
+            <div className="flex items-center gap-2.5">
+              <Avatar name={b.professionalName} size="md" />
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm truncate">{b.professionalName}</div>
+                <div className="text-xs text-[var(--muted)] truncate">{b.serviceName}</div>
               </div>
-              <span className="sl-badge" style={{ background: STATUS_COLORS[b.status] + "20", color: STATUS_COLORS[b.status], fontSize: 9 }}>
-                {STATUS_LABELS[b.status]}
-              </span>
+              <span className={cn("badge badge-xs", STATUS_BADGE[b.status])}></span>
             </div>
-          </div>
+          </motion.div>
         ))}
         {bookings.filter(b => b.status !== "CANCELLED").length === 0 && (
-          <p style={{ color: "var(--muted)", textAlign: "center", padding: 40, fontSize: 13 }}>Sin reservas activas</p>
+          <p className="text-[var(--muted)] text-center py-10 text-sm">Sin reservas activas</p>
         )}
       </div>
 
-      {/* Chat area */}
+      {/* Área de chat */}
       {selected ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          {/* Header */}
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 12, background: "var(--surface)" }}>
-            <Avatar name={selected.professionalName} size={40} />
+        <div className="flex-1 flex flex-col">
+          <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center gap-3 bg-[var(--surface)]">
+            <Avatar name={selected.professionalName} size="md" />
             <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{selected.professionalName}</div>
-              <div style={{ fontSize: 12, color: "var(--muted)" }}>{selected.serviceName}</div>
+              <div className="font-bold text-sm">{selected.professionalName}</div>
+              <div className="text-xs text-[var(--muted)]">{selected.serviceName}</div>
             </div>
           </div>
 
-          {/* Messages */}
-          <div style={{ flex: 1, overflow: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="flex-1 overflow-auto p-5 flex flex-col gap-3">
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: "var(--muted)", marginTop: 60 }}>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>💬</div>
-                <p style={{ fontSize: 13 }}>Inicia la conversación</p>
+              <div className="text-center text-[var(--muted)] mt-16">
+                <div className="text-4xl mb-2">💬</div>
+                <p className="text-sm">Inicia la conversación</p>
               </div>
             )}
-            {messages.map(msg => {
-              const isMine = msg.senderId === auth.userId;
-              return (
-                <div key={msg.id} style={{ display: "flex", justifyContent: isMine ? "flex-end" : "flex-start" }}>
-                  {!isMine && <Avatar name={msg.senderName} size={28} />}
-                  <div style={{ maxWidth: "70%", marginLeft: isMine ? 0 : 8, marginRight: isMine ? 0 : 0 }}>
-                    <div style={{ background: isMine ? "var(--accent)" : "var(--card)", color: "#fff", borderRadius: isMine ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", fontSize: 14, lineHeight: 1.5 }}>
-                      {msg.content}
+            <AnimatePresence initial={false}>
+              {messages.map(msg => {
+                const isMine = msg.senderId === auth.userId;
+                return (
+                  <motion.div key={msg.id}
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    className={cn("flex", isMine ? "justify-end" : "justify-start")}
+                  >
+                    {!isMine && <Avatar name={msg.senderName} size="sm" />}
+                    <div className={cn("max-w-[68%]", isMine ? "ml-0" : "ml-2")}>
+                      <div className={cn(
+                        "px-3.5 py-2.5 text-sm leading-relaxed text-white",
+                        isMine
+                          ? "bg-[var(--accent)] rounded-2xl rounded-br-sm"
+                          : "bg-[var(--card)] rounded-2xl rounded-bl-sm"
+                      )}>
+                        {msg.content}
+                      </div>
+                      <div className={cn("text-[10px] text-[var(--muted)] mt-1", isMine ? "text-right" : "text-left")}>
+                        {new Date(msg.createdAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
+                        {isMine && (msg.isRead ? " ✓✓" : " ✓")}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, textAlign: isMine ? "right" : "left" }}>
-                      {new Date(msg.createdAt).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}
-                      {isMine && (msg.isRead ? " ✓✓" : " ✓")}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
             <div ref={endRef} />
           </div>
 
-          {/* Input */}
-          <div style={{ padding: "14px 20px", borderTop: "1px solid var(--border)", display: "flex", gap: 10, background: "var(--surface)" }}>
-            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Escribe un mensaje..." onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()} style={{ flex: 1, borderRadius: 99 }} />
-            <button className="sl-btn sl-btn-primary" onClick={send} disabled={sending || !input.trim()} style={{ borderRadius: 99, padding: "10px 18px" }}>
-              {sending ? "..." : "➤"}
+          <div className="px-5 py-3.5 border-t border-[var(--border)] flex gap-2.5 bg-[var(--surface)]">
+            <input value={input} onChange={e => setInput(e.target.value)}
+              placeholder="Escribe un mensaje..."
+              onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+              className="input input-bordered bg-[var(--card)] border-[var(--border)] text-[var(--text)] flex-1 rounded-full text-sm" />
+            <button onClick={send} disabled={sending || !input.trim()}
+              className="btn btn-circle text-white disabled:opacity-40"
+              style={{ background: "var(--accent)", borderColor: "var(--accent)" }}>
+              {sending ? <span className="loading loading-spinner loading-xs" /> : "➤"}
             </button>
           </div>
         </div>
       ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, color: "var(--muted)" }}>
-          <div style={{ fontSize: 48 }}>💬</div>
+        <motion.div variants={fadeUp} initial="hidden" animate="show"
+          className="flex-1 flex flex-col items-center justify-center gap-4 text-[var(--muted)]">
+          <div className="text-5xl">💬</div>
           <p>Selecciona una conversación</p>
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -621,70 +626,72 @@ function ProfileView({ auth, onLogout }: { auth: AuthResponse; onLogout: () => v
     finally { setSaving(false); }
   };
 
-  if (!user) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--muted)" }} className="pulse">Cargando perfil...</div>;
+  if (!user) return (
+    <div className="flex items-center justify-center h-full text-[var(--muted)] pulse">
+      Cargando perfil...
+    </div>
+  );
 
   return (
-    <div style={{ padding: 32, maxWidth: 700, margin: "0 auto" }}>
-      <h2 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 24, marginBottom: 24 }}>Mi Perfil</h2>
+    <motion.div variants={fadeUp} initial="hidden" animate="show"
+      className="p-8 max-w-2xl mx-auto overflow-auto h-full">
+      <h2 className="font-black text-2xl mb-6" style={{ fontFamily: "var(--font-display)" }}>Mi Perfil</h2>
 
-      <div className="sl-card" style={{ padding: 28, marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
-          <Avatar name={user.name} url={user.profilePictureUrl} size={72} />
+      <div className="card bg-[var(--card)] border border-[var(--border)] p-7 mb-5">
+        <div className="flex items-center gap-5 mb-6">
+          <Avatar name={user.name} url={user.profilePictureUrl} size="xl" />
           <div>
-            <h3 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 22 }}>{user.name}</h3>
-            <p style={{ color: "var(--accent)", fontWeight: 600 }}>{user.role === "CLIENT" ? "Cliente" : "Profesional"}</p>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>Miembro desde {new Date(user.createdAt).toLocaleDateString("es-PE")}</p>
+            <h3 className="font-black text-xl" style={{ fontFamily: "var(--font-display)" }}>{user.name}</h3>
+            <p className="text-[var(--accent)] font-semibold">{user.role === "CLIENT" ? "Cliente" : "Profesional"}</p>
+            <p className="text-xs text-[var(--muted)] mt-1">Miembro desde {new Date(user.createdAt).toLocaleDateString("es-PE")}</p>
           </div>
         </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Email", value: user.email, icon: "✉️" },
             { label: "Teléfono", value: user.phone ?? "—", icon: "📱" },
             { label: "Rol", value: user.role === "CLIENT" ? "Cliente" : "Profesional", icon: "🏷️" },
             { label: "ID", value: `#${user.id}`, icon: "🆔" },
           ].map(({ label, value, icon }) => (
-            <div key={label} style={{ background: "var(--surface)", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>{icon} {label}</div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{value}</div>
+            <div key={label} className="bg-[var(--surface)] rounded-xl px-4 py-3">
+              <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{icon} {label}</div>
+              <div className="font-semibold text-sm">{value}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Photo URL update */}
-      <div className="sl-card" style={{ padding: 24, marginBottom: 20 }}>
-        <h3 style={{ fontWeight: 700, marginBottom: 14, fontSize: 16 }}>📸 Foto de perfil</h3>
-        <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 14 }}>
-          Sube tu foto a Cloudinary, Imgur o ImgBB y pega la URL aquí (debe comenzar con https://)
-        </p>
-        <div style={{ display: "flex", gap: 10 }}>
-          <input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://res.cloudinary.com/..." style={{ flex: 1 }} />
-          <button className="sl-btn sl-btn-primary" onClick={updatePhoto} disabled={saving || !photoUrl}>
-            {saving ? "Guardando..." : "Actualizar"}
+      <div className="card bg-[var(--card)] border border-[var(--border)] p-6 mb-5">
+        <h3 className="font-bold mb-3">📸 Foto de perfil</h3>
+        <p className="text-sm text-[var(--muted)] mb-4">Pega una URL de Cloudinary, Imgur o ImgBB (https://…)</p>
+        <div className="flex gap-2.5">
+          <input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)}
+            placeholder="https://res.cloudinary.com/..."
+            className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] flex-1 text-sm" />
+          <button onClick={updatePhoto} disabled={saving || !photoUrl}
+            className={cn("btn text-white", saving && "loading")}
+            style={{ background: "var(--accent)", borderColor: "var(--accent)" }}>
+            {saving ? "" : "Guardar"}
           </button>
         </div>
-        {photoError && <p style={{ color: "var(--danger)", fontSize: 12, marginTop: 8 }}>{photoError}</p>}
+        {photoError && <p className="text-error text-xs mt-2">{photoError}</p>}
       </div>
 
-      <button className="sl-btn sl-btn-danger" onClick={onLogout}>
+      <button onClick={onLogout} className="btn btn-error text-white">
         🚪 Cerrar sesión
       </button>
-    </div>
+    </motion.div>
   );
 }
 
-// ─── PROFESSIONALS EXPLORE ────────────────────────────────────────────────────
+// ─── PROFESSIONALS VIEW ───────────────────────────────────────────────────────
 function ProfessionalsView() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    api.professionals(-12.0464, -77.0428, 30)
-      .then(setProfessionals)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    api.professionals(-12.0464, -77.0428, 30).then(setProfessionals).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const filtered = professionals.filter(p =>
@@ -693,58 +700,62 @@ function ProfessionalsView() {
   );
 
   return (
-    <div style={{ padding: 32, overflow: "auto", height: "100%" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+    <div className="p-8 overflow-auto h-full">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 style={{ fontFamily: "Syne", fontWeight: 700, fontSize: 24 }}>Profesionales</h2>
-          <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>{professionals.length} disponibles en Lima</p>
+          <h2 className="font-black text-2xl" style={{ fontFamily: "var(--font-display)" }}>Profesionales</h2>
+          <p className="text-sm text-[var(--muted)] mt-1">{professionals.length} disponibles en Lima</p>
         </div>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Buscar..." style={{ width: 220 }} />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Buscar..."
+          className="input input-bordered bg-[var(--card)] border-[var(--border)] text-[var(--text)] w-56 text-sm" />
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }} className="pulse">Buscando profesionales...</div>
+        <div className="text-center py-20 text-[var(--muted)] pulse">Buscando profesionales...</div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+        <motion.div variants={stagger} initial="hidden" animate="show"
+          className="grid grid-cols-[repeat(auto-fill,minmax(290px,1fr))] gap-4">
           {filtered.map(p => (
-            <div key={p.id} className="sl-card" style={{ padding: 20, transition: "border-color .2s", cursor: "default" }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--accent)")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border)")}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
-                <Avatar name={p.userName} url={p.profilePictureUrl} size={48} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <h3 style={{ fontWeight: 700, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.userName}</h3>
-                    {p.isVerified && <span style={{ color: "#10b981", fontSize: 12 }}>✓</span>}
+            <motion.div key={p.id} variants={fadeUp} whileHover={{ scale: 1.02 }}
+              className="card bg-[var(--card)] border border-[var(--border)] p-5 hover:border-[var(--accent)] transition-colors cursor-default">
+              <div className="flex items-start gap-3 mb-4">
+                <Avatar name={p.userName} url={p.profilePictureUrl} size="lg" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-sm truncate">{p.userName}</h3>
+                    {p.isVerified && <span className="text-emerald-400 text-xs">✓</span>}
                   </div>
-                  <p style={{ color: "var(--accent)", fontSize: 12, fontWeight: 600 }}>{p.specialty}</p>
+                  <p className="text-xs font-semibold text-[var(--accent)]">{p.specialty}</p>
                 </div>
               </div>
 
-              {p.description && <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5, marginBottom: 12, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.description}</p>}
+              {p.description && (
+                <p className="text-xs text-[var(--muted)] leading-relaxed mb-3 line-clamp-2">{p.description}</p>
+              )}
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-1.5">
                   <Stars rating={p.averageRating} />
-                  <span style={{ fontSize: 11, color: "var(--muted)" }}>{p.averageRating.toFixed(1)} ({p.totalReviews})</span>
+                  <span className="text-xs text-[var(--muted)]">{p.averageRating.toFixed(1)} ({p.totalReviews})</span>
                 </div>
-                <span style={{ fontWeight: 700, color: "var(--accent3)", fontSize: 15 }}>S/. {p.baseRate}/hr</span>
+                <span className="font-bold text-emerald-400 text-sm">S/. {p.baseRate}/hr</span>
               </div>
 
               {p.services.length > 0 && (
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
+                <div className="flex gap-1.5 flex-wrap mb-4">
                   {p.services.slice(0, 3).map(s => (
-                    <span key={s.id} className="sl-badge" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}>{s.name}</span>
+                    <span key={s.id} className="badge badge-sm bg-[var(--surface)] border-[var(--border)] text-[var(--muted)]">{s.name}</span>
                   ))}
                 </div>
               )}
 
-              <button className="sl-btn sl-btn-primary" style={{ width: "100%", fontSize: 13 }}>
+              <button className="btn btn-sm w-full text-white text-xs"
+                style={{ background: "var(--accent)", borderColor: "var(--accent)" }}>
                 📅 Ver disponibilidad
               </button>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );
@@ -753,7 +764,6 @@ function ProfessionalsView() {
 // ─── NOTIFICATIONS PANEL ──────────────────────────────────────────────────────
 function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const [notifs, setNotifs] = useState<Notif[]>([]);
-
   useEffect(() => { api.notifications().then(setNotifs).catch(() => {}); }, []);
 
   const TYPE_ICONS: Record<string, string> = {
@@ -762,45 +772,54 @@ function NotificationsPanel({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div style={{ position: "fixed", top: 60, right: 16, width: 340, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,.5)", zIndex: 1000, overflow: "hidden" }} className="fade-in">
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ fontFamily: "Syne", fontWeight: 700 }}>Notificaciones</h3>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button className="sl-btn sl-btn-ghost sl-btn-sm" onClick={() => api.markAllRead().then(() => setNotifs(prev => prev.map(n => ({ ...n, isRead: true }))))}>
-            ✓ Marcar leídas
-          </button>
-          <button onClick={onClose} style={{ background: "none", color: "var(--muted)", fontSize: 16 }}>✕</button>
+    <motion.div
+      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.97 }}
+      transition={{ duration: 0.2 }}
+      className="fixed top-16 right-4 w-80 bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl z-[1000] overflow-hidden"
+    >
+      <div className="px-5 py-4 border-b border-[var(--border)] flex justify-between items-center">
+        <h3 className="font-bold" style={{ fontFamily: "var(--font-display)" }}>Notificaciones</h3>
+        <div className="flex gap-2">
+          <button onClick={() => api.markAllRead().then(() => setNotifs(p => p.map(n => ({ ...n, isRead: true }))))}
+            className="btn btn-ghost btn-xs text-[var(--muted)]">✓ Leídas</button>
+          <button onClick={onClose} className="btn btn-ghost btn-xs text-[var(--muted)]">✕</button>
         </div>
       </div>
-      <div style={{ maxHeight: 420, overflow: "auto" }}>
+      <div className="max-h-96 overflow-auto">
         {notifs.length === 0 ? (
-          <p style={{ textAlign: "center", color: "var(--muted)", padding: 32 }}>Sin notificaciones</p>
+          <p className="text-center text-[var(--muted)] py-8 text-sm">Sin notificaciones</p>
         ) : notifs.map(n => (
-          <div key={n.id} style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", background: n.isRead ? "transparent" : "rgba(108,99,255,.08)", display: "flex", gap: 12, alignItems: "flex-start" }}>
-            <span style={{ fontSize: 20 }}>{TYPE_ICONS[n.type] ?? "🔔"}</span>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{n.title}</div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{n.body}</div>
-              <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>{fmt(n.createdAt)}</div>
+          <motion.div key={n.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className={cn("px-5 py-3 border-b border-[var(--border)] flex gap-3 items-start",
+              !n.isRead && "bg-[var(--accent)]/5")}>
+            <span className="text-xl">{TYPE_ICONS[n.type] ?? "🔔"}</span>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-sm">{n.title}</div>
+              <div className="text-xs text-[var(--muted)] mt-0.5">{n.body}</div>
+              <div className="text-[10px] text-[var(--muted)] mt-1">{fmt(n.createdAt)}</div>
             </div>
-            {!n.isRead && <div style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", flexShrink: 0, marginTop: 4 }} />}
-          </div>
+            {!n.isRead && <div className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0 mt-1.5" />}
+          </motion.div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-// ─── MAIN APP ──────────────────────────────────────────────────────────────────
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [auth, setAuth] = useState<AuthResponse | null>(() => {
     const token = localStorage.getItem("sl_token");
     if (!token) return null;
-    const userId = Number(localStorage.getItem("sl_userId"));
-    const name = localStorage.getItem("sl_name") ?? "";
-    const email = localStorage.getItem("sl_email") ?? "";
-    const role = (localStorage.getItem("sl_role") ?? "CLIENT") as Role;
-    return token ? { token, userId, name, email, role } : null;
+    return {
+      token,
+      userId: Number(localStorage.getItem("sl_userId")),
+      name: localStorage.getItem("sl_name") ?? "",
+      email: localStorage.getItem("sl_email") ?? "",
+      role: (localStorage.getItem("sl_role") ?? "CLIENT") as Role,
+    };
   });
   const [view, setView] = useState<View>("map");
   const [unread, setUnread] = useState(0);
@@ -815,87 +834,90 @@ export default function App() {
     setAuth(data);
   }, []);
 
-  const handleLogout = useCallback(() => {
-    localStorage.clear();
-    setAuth(null);
-  }, []);
+  const handleLogout = useCallback(() => { localStorage.clear(); setAuth(null); }, []);
 
   useEffect(() => {
     if (!auth) return;
-    const fetchUnread = () => api.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => {});
-    fetchUnread();
-    const id = setInterval(fetchUnread, 30_000);
+    const fetch = () => api.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => {});
+    fetch();
+    const id = setInterval(fetch, 30_000);
     return () => clearInterval(id);
   }, [auth]);
 
-  if (!auth) return (
-    <>
-      <style>{STYLE}</style>
-      <AuthPage onLogin={handleLogin} />
-    </>
-  );
+  if (!auth) return <AuthPage onLogin={handleLogin} />;
 
-  const NAV_ITEMS = [
-    { id: "map", icon: "🗺️", label: "Mapa" },
-    { id: "professionals", icon: "👥", label: "Profesionales" },
-    { id: "bookings", icon: "📋", label: "Reservas" },
-    { id: "chat", icon: "💬", label: "Chat" },
-    { id: "profile", icon: "👤", label: "Perfil" },
+  const NAV = [
+    { id: "map",           icon: "🗺️",  label: "Mapa" },
+    { id: "professionals", icon: "👥",  label: "Profesionales" },
+    { id: "bookings",      icon: "📋",  label: "Reservas" },
+    { id: "chat",          icon: "💬",  label: "Chat" },
+    { id: "profile",       icon: "👤",  label: "Perfil" },
   ] as const;
 
   return (
-    <>
-      <style>{STYLE}</style>
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        {/* Topbar */}
-        <header style={{ height: 56, background: "var(--surface)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", flexShrink: 0, zIndex: 100 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 20 }}>🔗</span>
-            <span style={{ fontFamily: "Syne", fontWeight: 800, fontSize: 18, background: "linear-gradient(135deg, #6c63ff, #ff6584)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ServiLink</span>
-          </div>
+    <div data-theme="dark" className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
+      {/* Topbar */}
+      <header className="h-14 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between px-5 shrink-0 z-50">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">🔗</span>
+          <span className="font-black text-lg" style={{ fontFamily: "var(--font-display)", background: "linear-gradient(135deg, #6c63ff, #ff6584)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            ServiLink
+          </span>
+        </div>
 
-          <nav style={{ display: "flex", gap: 4 }}>
-            {NAV_ITEMS.map(({ id, icon, label }) => (
-              <button key={id} onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 10, background: view === id ? "rgba(108,99,255,.15)" : "transparent", color: view === id ? "var(--accent)" : "var(--muted)", border: "none", fontWeight: view === id ? 700 : 400, fontSize: 13, cursor: "pointer", transition: "all .2s", position: "relative" }}>
-                {icon} {label}
-                {id === "chat" && unread > 0 && (
-                  <span style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: "var(--accent2)" }} />
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => setShowNotifs(p => !p)} style={{ position: "relative", background: "none", color: "var(--muted)", fontSize: 18, cursor: "pointer" }}>
-              🔔
-              {unread > 0 && (
-                <span style={{ position: "absolute", top: -4, right: -4, background: "var(--accent2)", color: "#fff", borderRadius: 99, minWidth: 16, height: 16, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px" }}>
-                  {unread > 9 ? "9+" : unread}
-                </span>
+        <nav className="flex gap-1">
+          {NAV.map(({ id, icon, label }) => (
+            <button key={id} onClick={() => setView(id)}
+              className={cn(
+                "btn btn-ghost btn-sm gap-1.5 text-xs font-semibold relative",
+                view === id ? "text-[var(--accent)] bg-[var(--accent)]/10" : "text-[var(--muted)]"
+              )}>
+              {icon} {label}
+              {id === "chat" && unread > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--accent2)]" />
               )}
             </button>
-            <Avatar name={auth.name} size={32} />
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{auth.name.split(" ")[0]}</span>
-          </div>
-        </header>
+          ))}
+        </nav>
 
-        {/* Content */}
-        <main style={{ flex: 1, overflow: "hidden" }}>
-          {view === "map" && <MapView auth={auth} />}
-          {view === "professionals" && <ProfessionalsView />}
-          {view === "bookings" && <BookingsView auth={auth} />}
-          {view === "chat" && <ChatView auth={auth} />}
-          {view === "profile" && <ProfileView auth={auth} onLogout={handleLogout} />}
-        </main>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setShowNotifs(p => !p)} className="btn btn-ghost btn-sm btn-circle relative text-[var(--muted)] text-lg">
+            🔔
+            {unread > 0 && (
+              <span className="badge badge-xs badge-error absolute -top-0.5 -right-0.5 text-[9px] font-bold min-w-4">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </button>
+          <Avatar name={auth.name} size="sm" />
+          <span className="text-sm font-semibold">{auth.name.split(" ")[0]}</span>
+        </div>
+      </header>
 
-        {/* Notifications overlay */}
+      {/* Content */}
+      <main className="flex-1 overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div key={view} className="h-full"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}>
+            {view === "map"           && <MapView auth={auth} />}
+            {view === "professionals" && <ProfessionalsView />}
+            {view === "bookings"      && <BookingsView auth={auth} />}
+            {view === "chat"          && <ChatView auth={auth} />}
+            {view === "profile"       && <ProfileView auth={auth} onLogout={handleLogout} />}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Notifications */}
+      <AnimatePresence>
         {showNotifs && (
           <>
-            <div style={{ position: "fixed", inset: 0, zIndex: 999 }} onClick={() => setShowNotifs(false)} />
+            <div className="fixed inset-0 z-[999]" onClick={() => setShowNotifs(false)} />
             <NotificationsPanel onClose={() => setShowNotifs(false)} />
           </>
         )}
-      </div>
-    </>
+      </AnimatePresence>
+    </div>
   );
 }
