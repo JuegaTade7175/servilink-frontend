@@ -47,6 +47,7 @@ src/
 ## Cómo correr
 
 ### Prerrequisitos
+
 - Node.js 18+
 - Backend ServiLink corriendo en `http://localhost:8081`
 
@@ -58,11 +59,12 @@ npm install
 npm run dev
 ```
 
-La app queda en **http://localhost:5174**
+La app queda en **<http://localhost:5174>**
 
 ### Variables de entorno
 
 El archivo `.env` ya está configurado:
+
 ```
 VITE_API_URL=http://localhost:8081
 ```
@@ -74,6 +76,7 @@ Si el backend corre en otro puerto, actualiza este archivo.
 ## Conexión con el backend
 
 ### Autenticación
+
 El token JWT se guarda en `localStorage` y se inyecta automáticamente en cada request via interceptor de axios:
 
 ```typescript
@@ -125,27 +128,6 @@ App
 ```
 
 ---
-
-## Para agregar Leaflet real (opcional)
-
-```bash
-npm install leaflet react-leaflet @types/leaflet
-```
-
-Luego en `MapView`, reemplaza el SVG simulado por:
-
-```tsx
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-
-<MapContainer center={[-12.0464, -77.0428]} zoom={13} style={{ height: '100%' }}>
-  <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-  {geoPoints.map(p => (
-    <Marker key={p.professionalId} position={[p.latitude, p.longitude]}>
-      <Popup>{p.name} — {p.specialty}</Popup>
-    </Marker>
-  ))}
-</MapContainer>
-```
 
 ---
 
