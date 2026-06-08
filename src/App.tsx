@@ -1,6 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
 import { cn } from "./lib/utils";
+
+// Fix para iconos de Leaflet en entornos como Vite
+import markerIcon from "leaflet/dist/images/marker-icon.png";
+import markerShadow from "leaflet/dist/images/marker-shadow.png";
+
+const DefaultIcon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 type Role = "CLIENT" | "PROFESSIONAL";
@@ -220,56 +236,39 @@ function MapView({ auth }: { auth: AuthResponse }) {
     api.reviews(selected.id).then(setReviews).catch(() => setReviews([]));
   }, [selected]);
 
-  const mapPins = professionals.map((p, i) => ({ ...p, x: 20 + ((i * 73) % 75), y: 15 + ((i * 47) % 65) }));
-
   return (
     <div className="flex h-full">
-      {/* Mapa */}
-      <div className="flex-1 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #1a2035, #0f1520)" }}>
-        <svg className="absolute inset-0 w-full h-full opacity-5">
-          <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#6c63ff" strokeWidth="1"/></pattern></defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-        <svg className="absolute inset-0 w-full h-full opacity-15">
-          <line x1="0" y1="40%" x2="100%" y2="38%" stroke="#fff" strokeWidth="2"/>
-          <line x1="0" y1="65%" x2="100%" y2="63%" stroke="#fff" strokeWidth="1.5"/>
-          <line x1="30%" y1="0" x2="32%" y2="100%" stroke="#fff" strokeWidth="2"/>
-          <line x1="70%" y1="0" x2="68%" y2="100%" stroke="#fff" strokeWidth="1.5"/>
-        </svg>
-
-        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--muted)] flex items-center gap-2">
-          📍 Lima, Perú — Radio 20km
-        </div>
-
+      {/* Mapa Real con Leaflet */}
+      <div className="flex-1 relative overflow-hidden bg-[#1a2035]">
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center text-[var(--muted)] pulse">
+          <div className="absolute inset-0 flex items-center justify-center text-[var(--muted)] pulse z-[1000] bg-[#1a2035]/50 backdrop-blur-sm">
             Cargando profesionales...
           </div>
-        ) : mapPins.map(p => (
-          <motion.div key={p.id}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, delay: 0.05 }}
-            onClick={() => setSelected(p)}
-            className="absolute cursor-pointer"
-            style={{ left: `${p.x}%`, top: `${p.y}%`, transform: "translate(-50%, -100%)", zIndex: selected?.id === p.id ? 10 : 1 }}
-          >
-            <div className={cn(
-              "rounded-xl px-2.5 py-1.5 text-[11px] font-bold whitespace-nowrap shadow-xl flex items-center gap-1.5 border-2 transition-all",
-              selected?.id === p.id
-                ? "bg-[var(--accent)] border-[var(--accent)] text-white"
-                : "bg-[var(--card)] border-[var(--border)] text-[var(--text)]"
-            )}>
-              {p.isVerified ? "✅" : "👤"} {p.userName.split(" ")[0]}
-              <span className="text-yellow-400">★{p.averageRating.toFixed(1)}</span>
-            </div>
-            <div className={cn("w-2.5 h-2.5 rounded-full mx-auto mt-0.5", selected?.id === p.id ? "bg-[var(--accent)]" : "bg-[var(--border)]")} />
-          </motion.div>
-        ))}
+        ) : (
+          <MapContainer center={[-12.0464, -77.0428]} zoom={13} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            {professionals.filter(p => p.latitude && p.longitude).map(p => (
+              <Marker 
+                key={p.id} 
+                position={[p.latitude!, p.longitude!]}
+                eventHandlers={{
+                  click: () => setSelected(p),
+                }}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <p className="font-bold">{p.userName}</p>
+                    <p className="text-[var(--accent)]">{p.specialty}</p>
+                    <p className="text-xs text-gray-500">S/. {p.baseRate}/hr</p>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        )}
 
-        {/* Centro */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div className="w-4 h-4 bg-[var(--accent2)] rounded-full shadow-[0_0_0_6px_rgba(255,101,132,0.25)]" />
+        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--muted)] flex items-center gap-2 z-[1000]">
+          📍 Lima, Perú — Radio 20km
         </div>
       </div>
 
