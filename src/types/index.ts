@@ -35,6 +35,16 @@ export interface User {
 }
 
 // ─── Professional ─────────────────────────────────────────────────────────────
+export interface ServiceItem {
+  id: number;
+  name: string;
+  description?: string;
+  referencePrice?: number;
+  estimatedDurationHours?: number;
+  categoryId?: number;
+  categoryName?: string;
+}
+
 export interface Professional {
   id: number;
   userId: number;
@@ -54,7 +64,7 @@ export interface Professional {
   totalReviews: number;
   certifications?: string;
   distanceKm?: number;
-  services: Service[];
+  services: ServiceItem[];
 }
 
 export interface GeoPoint {
@@ -77,18 +87,13 @@ export interface Category {
   iconUrl?: string;
 }
 
-export interface Service {
-  id: number;
-  name: string;
-  description?: string;
-  referencePrice?: number;
-  estimatedDurationHours?: number;
-  categoryId?: number;
-  categoryName?: string;
-}
-
 // ─── Booking ─────────────────────────────────────────────────────────────────
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+export type BookingStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface Booking {
   id: number;
@@ -115,31 +120,20 @@ export interface CreateBookingRequest {
   description?: string;
 }
 
-// ─── Message ─────────────────────────────────────────────────────────────────
-export interface Message {
+// ─── BookingConfirmation ──────────────────────────────────────────────────────
+export type ConfirmationStatus = 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'CANCELLED';
+
+export interface BookingConfirmation {
   id: number;
   bookingId: number;
-  senderId: number;
-  senderName: string;
-  receiverId: number;
-  receiverName: string;
-  content: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
-// ─── Notification ─────────────────────────────────────────────────────────────
-export type NotificationType =
-  | 'BOOKING_CREATED' | 'BOOKING_CONFIRMED' | 'BOOKING_CANCELLED'
-  | 'BOOKING_COMPLETED' | 'PAYMENT_RECEIVED' | 'NEW_MESSAGE' | 'NEW_REVIEW';
-
-export interface Notification {
-  id: number;
-  title: string;
-  body: string;
-  type: NotificationType;
-  referenceId?: number;
-  isRead: boolean;
+  clientName: string;
+  professionalName: string;
+  serviceName: string;
+  scheduledAt: string;
+  confirmationCode: string;
+  status: ConfirmationStatus;
+  confirmedAt?: string;
+  expiresAt: string;
   createdAt: string;
 }
 
@@ -158,6 +152,39 @@ export interface Payment {
   createdAt: string;
 }
 
+// ─── Message ─────────────────────────────────────────────────────────────────
+export interface Message {
+  id: number;
+  bookingId: number;
+  senderId: number;
+  senderName: string;
+  receiverId: number;
+  receiverName: string;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// ─── Notification ─────────────────────────────────────────────────────────────
+export type NotificationType =
+  | 'BOOKING_CREATED'
+  | 'BOOKING_CONFIRMED'
+  | 'BOOKING_CANCELLED'
+  | 'BOOKING_COMPLETED'
+  | 'PAYMENT_RECEIVED'
+  | 'NEW_MESSAGE'
+  | 'NEW_REVIEW';
+
+export interface Notification {
+  id: number;
+  title: string;
+  body: string;
+  type: NotificationType;
+  referenceId?: number;
+  isRead: boolean;
+  createdAt: string;
+}
+
 // ─── Review ──────────────────────────────────────────────────────────────────
 export interface Review {
   id: number;
@@ -172,7 +199,14 @@ export interface Review {
 }
 
 // ─── Availability ─────────────────────────────────────────────────────────────
-export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type DayOfWeek =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY';
 
 export interface Availability {
   id: number;
