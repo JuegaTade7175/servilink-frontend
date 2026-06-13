@@ -14,30 +14,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const KEYS = {
+  token:  'sl_token',
+  userId: 'sl_userId',
+  name:   'sl_name',
+  email:  'sl_email',
+  role:   'sl_role',
+} as const;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem('sl_token')
-  );
-  const [userId, setUserId] = useState<number | null>(() => {
-    const s = localStorage.getItem('sl_userId');
+  const [token,     setToken]     = useState<string | null>(() => localStorage.getItem(KEYS.token));
+  const [userId,    setUserId]    = useState<number | null>(() => {
+    const s = localStorage.getItem(KEYS.userId);
     return s ? Number(s) : null;
   });
-  const [userName, setUserName] = useState<string | null>(
-    () => localStorage.getItem('sl_name')
-  );
-  const [userEmail, setUserEmail] = useState<string | null>(
-    () => localStorage.getItem('sl_email')
-  );
-  const [role, setRole] = useState<Role | null>(
-    () => localStorage.getItem('sl_role') as Role | null
-  );
+  const [userName,  setUserName]  = useState<string | null>(() => localStorage.getItem(KEYS.name));
+  const [userEmail, setUserEmail] = useState<string | null>(() => localStorage.getItem(KEYS.email));
+  const [role,      setRole]      = useState<Role | null>(() => localStorage.getItem(KEYS.role) as Role | null);
 
   const login = useCallback((data: AuthResponse) => {
-    localStorage.setItem('sl_token', data.token);
-    localStorage.setItem('sl_userId', String(data.userId));
-    localStorage.setItem('sl_name', data.name);
-    localStorage.setItem('sl_email', data.email);
-    localStorage.setItem('sl_role', data.role);
+    localStorage.setItem(KEYS.token,  data.token);
+    localStorage.setItem(KEYS.userId, String(data.userId));
+    localStorage.setItem(KEYS.name,   data.name);
+    localStorage.setItem(KEYS.email,  data.email);
+    localStorage.setItem(KEYS.role,   data.role);
     setToken(data.token);
     setUserId(data.userId);
     setUserName(data.name);
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.clear();
+    Object.values(KEYS).forEach(k => localStorage.removeItem(k));
     setToken(null);
     setUserId(null);
     setUserName(null);
@@ -55,18 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        token,
-        userId,
-        userName,
-        userEmail,
-        role,
-        isAuthenticated: !!token,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{
+      token, userId, userName, userEmail, role,
+      isAuthenticated: !!token,
+      login, logout,
+    }}>
       {children}
     </AuthContext.Provider>
   );

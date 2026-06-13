@@ -6,80 +6,175 @@ import L from 'leaflet';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Pages & context
 import BookingsPage from './pages/BookingsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi } from './api';
-import type { AuthResponse, Professional, Notification, User, Review, Role } from './types';
+import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
+import type { Professional, Notification, User, Review, Role } from './types';
 
-// Fix Leaflet icons
-const DefaultIcon = L.icon({ iconUrl: markerIcon, shadowUrl: markerShadow, iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34] });
-L.Marker.prototype.options.icon = DefaultIcon;
+// Fix Leaflet default icons (Vite no resuelve las URLs automáticamente)
+L.Marker.prototype.options.icon = L.icon({
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
 
 type View = 'map' | 'bookings' | 'professionals' | 'chat' | 'profile';
 
-// ─── cn ───────────────────────────────────────────────────────────────────────
-function cn(...c: (string|false|undefined|null)[]) { return c.filter(Boolean).join(' '); }
+// ─── Tiny helpers ──────────────────────────────────────────────────────────────
+function cn(...c: (string | false | undefined | null)[]) {
+  return c.filter(Boolean).join(' ');
+}
 
 // ─── Auth Page ────────────────────────────────────────────────────────────────
-function AuthPage({ onLogin }: { onLogin: (d: AuthResponse) => void }) {
-  const [mode, setMode] = useState<'login'|'register'>('login');
-  const [form, setForm] = useState({ name:'', email:'', password:'', phone:'', role:'CLIENT' as Role });
+function AuthPage() {
+  const { login } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [form, setForm] = useState({
+    name: '', email: '', password: '', phone: '', role: 'CLIENT' as Role,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handle = (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement>) =>
-    setForm(p=>({...p,[e.target.name]:e.target.value}));
+  const handle = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(p => ({ ...p, [e.target.name]: e.target.value }));
 
   const submit = async () => {
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
     try {
-      const res = mode==='login'
-        ? await authApi.login({ email:form.email, password:form.password })
+      const res = mode === 'login'
+        ? await authApi.login({ email: form.email, password: form.password })
         : await authApi.register(form);
-      onLogin(res);
-    } catch(e:unknown) { setError(e instanceof Error ? e.message : 'Error inesperado'); }
-    finally { setLoading(false); }
+      // context.login guarda todo en localStorage y actualiza estado
+      login(res);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error inesperado');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6"
-      style={{ background:'radial-gradient(ellipse at 30% 20%, #1a1040 0%, #0c0d14 60%)' }}>
-      <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}} transition={{duration:.5}} className="w-full max-w-sm">
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: 'radial-gradient(ellipse at 30% 20%, #1a1040 0%, #0c0d14 60%)' }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-sm"
+      >
+        {/* Logo */}
         <div className="text-center mb-10">
-          <motion.div initial={{scale:.5,opacity:0}} animate={{scale:1,opacity:1}} transition={{delay:.1,type:'spring',stiffness:200}} className="text-5xl mb-3">🔗</motion.div>
-          <h1 className="text-4xl font-black" style={{fontFamily:'var(--font-display)',background:'linear-gradient(135deg,#6c63ff,#ff6584)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>ServiLink</h1>
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+            className="text-5xl mb-3"
+          >🔗</motion.div>
+          <h1
+            className="text-4xl font-black"
+            style={{
+              fontFamily: 'var(--font-display)',
+              background: 'linear-gradient(135deg, #6c63ff, #ff6584)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >ServiLink</h1>
           <p className="text-[var(--muted)] text-sm mt-1">Servicios domésticos · Lima, Perú</p>
         </div>
+
         <div className="card bg-[var(--card)] border border-[var(--border)] shadow-2xl">
           <div className="card-body gap-5">
+            {/* Tabs */}
             <div className="tabs tabs-box bg-[var(--surface)] rounded-xl p-1">
-              {(['login','register'] as const).map(m=>(
-                <button key={m} onClick={()=>setMode(m)} className={cn('tab flex-1 rounded-lg text-sm font-semibold transition-all',mode===m&&'tab-active bg-[var(--accent)] text-white')}>
-                  {m==='login'?'Iniciar sesión':'Registrarse'}
+              {(['login', 'register'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setError(''); }}
+                  className={cn(
+                    'tab flex-1 rounded-lg text-sm font-semibold transition-all',
+                    mode === m && 'tab-active bg-[var(--accent)] text-white'
+                  )}
+                >
+                  {m === 'login' ? 'Iniciar sesión' : 'Registrarse'}
                 </button>
               ))}
             </div>
+
             <AnimatePresence mode="wait">
-              <motion.div key={mode} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-6}} transition={{duration:.2}} className="flex flex-col gap-3">
-                {mode==='register'&&<>
-                  <input name="name" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Nombre completo" value={form.name} onChange={handle}/>
-                  <input name="phone" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Teléfono" value={form.phone} onChange={handle}/>
-                  <select name="role" value={form.role} onChange={handle} className="select select-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full">
-                    <option value="CLIENT">Cliente</option>
-                    <option value="PROFESSIONAL">Profesional</option>
-                  </select>
-                </>}
-                <input name="email" type="email" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Email" value={form.email} onChange={handle}/>
-                <input name="password" type="password" className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full" placeholder="Contraseña" value={form.password} onChange={handle} onKeyDown={e=>e.key==='Enter'&&submit()}/>
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-3"
+              >
+                {mode === 'register' && (
+                  <>
+                    <input
+                      name="name"
+                      className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full"
+                      placeholder="Nombre completo"
+                      value={form.name}
+                      onChange={handle}
+                    />
+                    <input
+                      name="phone"
+                      className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full"
+                      placeholder="Teléfono"
+                      value={form.phone}
+                      onChange={handle}
+                    />
+                    <select
+                      name="role"
+                      value={form.role}
+                      onChange={handle}
+                      className="select select-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full"
+                    >
+                      <option value="CLIENT">Cliente</option>
+                      <option value="PROFESSIONAL">Profesional</option>
+                    </select>
+                  </>
+                )}
+                <input
+                  name="email"
+                  type="email"
+                  className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={handle}
+                />
+                <input
+                  name="password"
+                  type="password"
+                  className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] w-full"
+                  placeholder="Contraseña"
+                  value={form.password}
+                  onChange={handle}
+                  onKeyDown={e => e.key === 'Enter' && submit()}
+                />
               </motion.div>
             </AnimatePresence>
-            {error&&<p className="text-error text-sm text-center">{error}</p>}
-            <button className={cn('btn btn-primary w-full text-white',loading&&'loading')} onClick={submit} disabled={loading}
-              style={{background:'var(--accent)',borderColor:'var(--accent)'}}>
-              {loading?'':mode==='login'?'Entrar':'Crear cuenta'}
+
+            {error && <p className="text-error text-sm text-center">{error}</p>}
+
+            <button
+              className={cn('btn w-full text-white', loading && 'loading')}
+              onClick={submit}
+              disabled={loading}
+              style={{ background: 'var(--accent)', borderColor: 'var(--accent)' }}
+            >
+              {loading ? '' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
             </button>
-            <p className="text-center text-xs text-[var(--muted)]">Demo: carlos@servilink.pe / password123</p>
+
+            <p className="text-center text-xs text-[var(--muted)]">
+              Demo: carlos@servilink.pe / password123
+            </p>
           </div>
         </div>
       </motion.div>
@@ -87,41 +182,73 @@ function AuthPage({ onLogin }: { onLogin: (d: AuthResponse) => void }) {
   );
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-function Avatar({ name, url, size='md' }: { name:string; url?:string; size?:'sm'|'md'|'lg' }) {
-  const colors=['bg-indigo-500','bg-pink-500','bg-teal-500','bg-amber-500','bg-violet-500'];
-  const color=colors[name.charCodeAt(0)%colors.length];
-  const sz={sm:'w-7 h-7 text-xs',md:'w-9 h-9 text-sm',lg:'w-12 h-12 text-base'}[size];
-  const initials=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-  if(url) return <img src={url} alt={name} className={cn('rounded-full object-cover flex-shrink-0',sz)}/>;
-  return <div className={cn('rounded-full flex items-center justify-center text-white font-bold flex-shrink-0',sz,color)}>{initials}</div>;
+// ─── Shared UI ────────────────────────────────────────────────────────────────
+function Avatar({ name, url, size = 'md' }: { name: string; url?: string; size?: 'sm' | 'md' | 'lg' }) {
+  const colors = ['bg-indigo-500', 'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-violet-500'];
+  const color = colors[name.charCodeAt(0) % colors.length];
+  const sz = { sm: 'w-7 h-7 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-12 h-12 text-base' }[size];
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  if (url) return <img src={url} alt={name} className={cn('rounded-full object-cover flex-shrink-0', sz)} />;
+  return (
+    <div className={cn('rounded-full flex items-center justify-center text-white font-bold flex-shrink-0', sz, color)}>
+      {initials}
+    </div>
+  );
 }
-function Stars({r}:{r:number}){ return <span className="text-amber-400 text-sm">{'★'.repeat(Math.round(r))}<span className="text-white/20">{'★'.repeat(5-Math.round(r))}</span></span>; }
+
+function Stars({ r }: { r: number }) {
+  return (
+    <span className="text-amber-400 text-sm">
+      {'★'.repeat(Math.round(r))}
+      <span className="text-white/20">{'★'.repeat(5 - Math.round(r))}</span>
+    </span>
+  );
+}
 
 // ─── Map View ─────────────────────────────────────────────────────────────────
 function MapView() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [selected, setSelected] = useState<Professional|null>(null);
+  const [selected, setSelected] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]);
 
   useEffect(() => {
-    professionalsApi.nearby(-12.0464,-77.0428,20).then(setProfessionals).catch(()=>{}).finally(()=>setLoading(false));
-  },[]);
+    professionalsApi.nearby(-12.0464, -77.0428, 20)
+      .then(setProfessionals)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
   useEffect(() => {
-    if(!selected) return;
-    reviewsApi.byProfessional(selected.id).then(setReviews).catch(()=>setReviews([]));
-  },[selected]);
+    if (!selected) return;
+    reviewsApi.byProfessional(selected.id).then(setReviews).catch(() => setReviews([]));
+  }, [selected]);
 
   return (
     <div className="flex h-full">
+      {/* Mapa Leaflet real */}
       <div className="flex-1 relative">
-        {loading&&<div className="absolute inset-0 flex items-center justify-center bg-[#1a2035]/80 z-[1000] text-[var(--muted)]"><div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin mr-3"/>Cargando...</div>}
-        <MapContainer center={[-12.0464,-77.0428]} zoom={13} style={{height:'100%',width:'100%'}}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-          {professionals.filter(p=>p.latitude&&p.longitude).map(p=>(
-            <Marker key={p.id} position={[p.latitude!,p.longitude!]} eventHandlers={{click:()=>setSelected(p)}}>
-              <Popup><div className="text-sm"><p className="font-bold">{p.userName}</p><p className="text-[#6c63ff]">{p.specialty}</p><p className="text-xs text-gray-500">S/. {p.baseRate}/hr</p></div></Popup>
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#1a2035]/80 z-[1000] text-[var(--muted)]">
+            <div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin mr-3" />
+            Cargando...
+          </div>
+        )}
+        <MapContainer center={[-12.0464, -77.0428]} zoom={13} style={{ height: '100%', width: '100%' }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {professionals.filter(p => p.latitude && p.longitude).map(p => (
+            <Marker
+              key={p.id}
+              position={[p.latitude!, p.longitude!]}
+              eventHandlers={{ click: () => setSelected(p) }}
+            >
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-bold">{p.userName}</p>
+                  <p style={{ color: '#6c63ff' }}>{p.specialty}</p>
+                  <p className="text-gray-500 text-xs">S/. {p.baseRate}/hr · ★{p.averageRating.toFixed(1)}</p>
+                </div>
+              </Popup>
             </Marker>
           ))}
         </MapContainer>
@@ -129,58 +256,83 @@ function MapView() {
           📍 Lima, Perú — Radio 20km
         </div>
       </div>
+
+      {/* Sidebar */}
       <div className="w-80 border-l border-[var(--border)] overflow-auto bg-[var(--surface)]">
         <AnimatePresence mode="wait">
           {selected ? (
-            <motion.div key="detail" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} exit={{opacity:0}} className="p-5">
-              <button onClick={()=>setSelected(null)} className="btn btn-ghost btn-sm text-[var(--muted)] mb-4">← Volver</button>
+            <motion.div key="detail" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-5">
+              <button onClick={() => setSelected(null)} className="btn btn-ghost btn-sm text-[var(--muted)] mb-4">← Volver</button>
               <div className="flex gap-3 items-start mb-4">
-                <Avatar name={selected.userName} url={selected.profilePictureUrl} size="lg"/>
+                <Avatar name={selected.userName} url={selected.profilePictureUrl} size="lg" />
                 <div>
                   <h3 className="font-bold">{selected.userName}</h3>
                   <p className="text-[var(--accent)] text-sm">{selected.specialty}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Stars r={selected.averageRating}/>
+                    <Stars r={selected.averageRating} />
                     <span className="text-xs text-[var(--muted)]">{selected.averageRating.toFixed(1)} ({selected.totalReviews})</span>
-                    {selected.isVerified&&<span className="badge badge-success badge-xs">✓</span>}
+                    {selected.isVerified && <span className="badge badge-success badge-xs">✓</span>}
                   </div>
                 </div>
               </div>
-              {selected.description&&<p className="text-sm text-[var(--muted)] mb-4">{selected.description}</p>}
+              {selected.description && <p className="text-sm text-[var(--muted)] mb-4">{selected.description}</p>}
               <div className="grid grid-cols-2 gap-2 mb-4">
-                {[{l:'Tarifa',v:`S/. ${selected.baseRate}/hr`},{l:'Radio',v:`${selected.coverageRadiusKm??'?'} km`},{l:'Distancia',v:selected.distanceKm?`${selected.distanceKm.toFixed(1)} km`:'—'},{l:'Teléfono',v:selected.userPhone??'—'}].map(({l,v})=>(
-                  <div key={l} className="bg-[var(--card)] rounded-xl p-3"><div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{l}</div><div className="font-bold text-sm">{v}</div></div>
+                {[
+                  { l: 'Tarifa', v: `S/. ${selected.baseRate}/hr` },
+                  { l: 'Radio', v: `${selected.coverageRadiusKm ?? '?'} km` },
+                  { l: 'Distancia', v: selected.distanceKm ? `${selected.distanceKm.toFixed(1)} km` : '—' },
+                  { l: 'Teléfono', v: selected.userPhone ?? '—' },
+                ].map(({ l, v }) => (
+                  <div key={l} className="bg-[var(--card)] rounded-xl p-3">
+                    <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{l}</div>
+                    <div className="font-bold text-sm">{v}</div>
+                  </div>
                 ))}
               </div>
-              {selected.services.length>0&&<div className="mb-4">
-                <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-2">Servicios</p>
-                <div className="flex flex-col gap-1.5">
-                  {selected.services.map(s=>(
-                    <div key={s.id} className="bg-[var(--card)] rounded-xl px-3 py-2 flex justify-between">
-                      <span className="text-sm">{s.name}</span>
-                      {s.referencePrice&&<span className="font-bold text-[var(--accent)] text-sm">S/. {s.referencePrice}</span>}
-                    </div>
-                  ))}
+              {selected.services.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-2">Servicios</p>
+                  <div className="flex flex-col gap-1.5">
+                    {selected.services.map(s => (
+                      <div key={s.id} className="bg-[var(--card)] rounded-xl px-3 py-2 flex justify-between">
+                        <span className="text-sm">{s.name}</span>
+                        {s.referencePrice && <span className="font-bold text-[var(--accent)] text-sm">S/. {s.referencePrice}</span>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>}
-              {reviews.slice(0,2).map(r=>(
+              )}
+              {reviews.slice(0, 2).map(r => (
                 <div key={r.id} className="bg-[var(--card)] rounded-xl p-3 mb-2">
-                  <div className="flex justify-between mb-1"><span className="text-xs font-semibold">{r.clientName}</span><Stars r={r.rating}/></div>
-                  {r.comment&&<p className="text-xs text-[var(--muted)]">{r.comment}</p>}
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs font-semibold">{r.clientName}</span>
+                    <Stars r={r.rating} />
+                  </div>
+                  {r.comment && <p className="text-xs text-[var(--muted)]">{r.comment}</p>}
                 </div>
               ))}
             </motion.div>
           ) : (
-            <motion.div key="list" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5">
-              <h2 className="font-black text-lg mb-1" style={{fontFamily:'var(--font-display)'}}>Profesionales</h2>
+            <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5">
+              <h2 className="font-black text-lg mb-1" style={{ fontFamily: 'var(--font-display)' }}>Profesionales</h2>
               <p className="text-sm text-[var(--muted)] mb-4">{professionals.length} cerca de Lima</p>
               <div className="flex flex-col gap-2">
-                {professionals.map(p=>(
-                  <div key={p.id} onClick={()=>setSelected(p)} className="card bg-[var(--card)] border border-[var(--border)] cursor-pointer p-3 hover:border-[#6c63ff]/40 transition-colors">
+                {professionals.map(p => (
+                  <div
+                    key={p.id}
+                    onClick={() => setSelected(p)}
+                    className="card bg-[var(--card)] border border-[var(--border)] cursor-pointer p-3 hover:border-[#6c63ff]/40 transition-colors"
+                  >
                     <div className="flex items-center gap-2.5">
-                      <Avatar name={p.userName} url={p.profilePictureUrl}/>
-                      <div className="flex-1 min-w-0"><div className="font-semibold text-sm truncate">{p.userName}</div><div className="text-xs text-[var(--accent)]">{p.specialty}</div></div>
-                      <div className="text-right"><div className="text-xs font-bold text-yellow-400">★ {p.averageRating.toFixed(1)}</div><div className="text-xs text-[var(--muted)]">S/. {p.baseRate}/hr</div></div>
+                      <Avatar name={p.userName} url={p.profilePictureUrl} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">{p.userName}</div>
+                        <div className="text-xs text-[var(--accent)]">{p.specialty}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-bold text-yellow-400">★ {p.averageRating.toFixed(1)}</div>
+                        <div className="text-xs text-[var(--muted)]">S/. {p.baseRate}/hr</div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -199,33 +351,74 @@ function ProfessionalsView() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
-  useEffect(()=>{professionalsApi.nearby(-12.0464,-77.0428,30).then(setProfessionals).catch(()=>{}).finally(()=>setLoading(false));},[]);
-  const filtered=professionals.filter(p=>p.userName.toLowerCase().includes(search.toLowerCase())||p.specialty.toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => {
+    professionalsApi.nearby(-12.0464, -77.0428, 30)
+      .then(setProfessionals)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = professionals.filter(p =>
+    p.userName.toLowerCase().includes(search.toLowerCase()) ||
+    p.specialty.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="p-8 overflow-auto h-full">
       <div className="flex justify-between items-center mb-6">
-        <div><h2 className="font-black text-2xl" style={{fontFamily:'var(--font-display)'}}>Profesionales</h2><p className="text-sm text-[var(--muted)] mt-1">{professionals.length} disponibles en Lima</p></div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar..." className="input input-bordered bg-[var(--card)] border-[var(--border)] text-[var(--text)] w-56 text-sm"/>
+        <div>
+          <h2 className="font-black text-2xl" style={{ fontFamily: 'var(--font-display)' }}>Profesionales</h2>
+          <p className="text-sm text-[var(--muted)] mt-1">{professionals.length} disponibles en Lima</p>
+        </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Buscar..."
+          className="input input-bordered bg-[var(--card)] border-[var(--border)] text-[var(--text)] w-56 text-sm"
+        />
       </div>
-      {loading?<div className="text-center py-20 text-[var(--muted)]">Buscando...</div>:(
+
+      {loading ? (
+        <div className="text-center py-20 text-[var(--muted)]">Buscando profesionales...</div>
+      ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(290px,1fr))] gap-4">
-          {filtered.map(p=>(
-            <motion.div key={p.id} whileHover={{scale:1.02}} className="card bg-[var(--card)] border border-[var(--border)] p-5 hover:border-[var(--accent)] transition-colors">
+          {filtered.map(p => (
+            <motion.div
+              key={p.id}
+              whileHover={{ scale: 1.02 }}
+              className="card bg-[var(--card)] border border-[var(--border)] p-5 hover:border-[var(--accent)] transition-colors"
+            >
               <div className="flex items-start gap-3 mb-4">
-                <Avatar name={p.userName} url={p.profilePictureUrl} size="lg"/>
+                <Avatar name={p.userName} url={p.profilePictureUrl} size="lg" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5"><h3 className="font-bold text-sm truncate">{p.userName}</h3>{p.isVerified&&<span className="text-emerald-400 text-xs">✓</span>}</div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-sm truncate">{p.userName}</h3>
+                    {p.isVerified && <span className="text-emerald-400 text-xs">✓</span>}
+                  </div>
                   <p className="text-xs font-semibold text-[var(--accent)]">{p.specialty}</p>
                 </div>
               </div>
-              {p.description&&<p className="text-xs text-[var(--muted)] mb-3 line-clamp-2">{p.description}</p>}
+              {p.description && <p className="text-xs text-[var(--muted)] mb-3 line-clamp-2">{p.description}</p>}
               <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-1.5"><Stars r={p.averageRating}/><span className="text-xs text-[var(--muted)]">{p.averageRating.toFixed(1)} ({p.totalReviews})</span></div>
+                <div className="flex items-center gap-1.5">
+                  <Stars r={p.averageRating} />
+                  <span className="text-xs text-[var(--muted)]">{p.averageRating.toFixed(1)} ({p.totalReviews})</span>
+                </div>
                 <span className="font-bold text-emerald-400 text-sm">S/. {p.baseRate}/hr</span>
               </div>
-              {p.services.length>0&&<div className="flex gap-1.5 flex-wrap mb-4">{p.services.slice(0,3).map(s=><span key={s.id} className="badge badge-sm bg-[var(--surface)] border-[var(--border)] text-[var(--muted)]">{s.name}</span>)}</div>}
-              <button className="btn btn-sm w-full text-white text-xs" style={{background:'var(--accent)',borderColor:'var(--accent)'}}>📅 Ver disponibilidad</button>
+              {p.services.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap mb-4">
+                  {p.services.slice(0, 3).map(s => (
+                    <span key={s.id} className="badge badge-sm bg-[var(--surface)] border-[var(--border)] text-[var(--muted)]">{s.name}</span>
+                  ))}
+                </div>
+              )}
+              <button
+                className="btn btn-sm w-full text-white text-xs"
+                style={{ background: 'var(--accent)', borderColor: 'var(--accent)' }}
+              >
+                📅 Ver disponibilidad
+              </button>
             </motion.div>
           ))}
         </div>
@@ -234,91 +427,244 @@ function ProfessionalsView() {
   );
 }
 
+// ─── Chat View ────────────────────────────────────────────────────────────────
+function ChatView() {
+  return (
+    <div className="flex items-center justify-center h-full flex-col gap-4 text-[var(--muted)]">
+      <div className="text-5xl">💬</div>
+      <p className="font-semibold text-[#e8e9f3]">Chat en tiempo real</p>
+      <p className="text-sm max-w-xs text-center">
+        El chat vía WebSocket STOMP está implementado en el backend.
+        Selecciona una reserva en el módulo de Reservas para chatear.
+      </p>
+    </div>
+  );
+}
+
 // ─── Profile View ─────────────────────────────────────────────────────────────
-function ProfileView({ onLogout }: { onLogout:()=>void }) {
-  const { userId } = useAuth();
-  const [user, setUser] = useState<User|null>(null);
+function ProfileView() {
+  const { logout, userName, userEmail, role, userId } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoErr, setPhotoErr] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  useEffect(()=>{usersApi.me().then(setUser).catch(()=>{});},[userId]);
+  useEffect(() => {
+    setLoadingUser(true);
+    usersApi.me()
+      .then(setUser)
+      .catch(() => {
+        // Si falla la API, usar datos del context como fallback
+        if (userName && userEmail && role && userId) {
+          setUser({
+            id: userId,
+            name: userName,
+            email: userEmail,
+            phone: '',
+            role: role,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      })
+      .finally(() => setLoadingUser(false));
+  }, [userId]);
 
   const updatePhoto = async () => {
-    if(!photoUrl.startsWith('https://')){ setPhotoErr('La URL debe comenzar con https://'); return; }
-    setSaving(true); setPhotoErr('');
-    try { const u = await usersApi.updatePhoto(photoUrl); setUser(u); setPhotoUrl(''); }
-    catch(e:unknown){ setPhotoErr(e instanceof Error?e.message:'Error'); }
-    finally{ setSaving(false); }
+    if (!photoUrl.startsWith('https://')) {
+      setPhotoErr('La URL debe comenzar con https://');
+      return;
+    }
+    setSaving(true);
+    setPhotoErr('');
+    try {
+      const updated = await usersApi.updatePhoto(photoUrl);
+      setUser(updated);
+      setPhotoUrl('');
+    } catch (e: unknown) {
+      setPhotoErr(e instanceof Error ? e.message : 'Error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if(!user) return <div className="flex items-center justify-center h-full text-[var(--muted)]">Cargando...</div>;
+  const removePhoto = async () => {
+    try {
+      const updated = await usersApi.removePhoto();
+      setUser(updated);
+    } catch { /* silent */ }
+  };
+
+  if (loadingUser) {
+    return (
+      <div className="flex items-center justify-center h-full text-[var(--muted)]">
+        <div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin mr-3" />
+        Cargando perfil...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-full text-[var(--muted)] flex-col gap-3">
+        <div className="text-4xl">⚠️</div>
+        <p>No se pudo cargar el perfil</p>
+        <button
+          onClick={logout}
+          className="btn btn-error btn-sm text-white"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    );
+  }
+
+  const displayName = user.name || userName || 'Usuario';
+  const displayEmail = user.email || userEmail || '';
 
   return (
-    <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} className="p-8 max-w-2xl mx-auto overflow-auto h-full">
-      <h2 className="font-black text-2xl mb-6" style={{fontFamily:'var(--font-display)'}}>Mi Perfil</h2>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-8 max-w-2xl mx-auto overflow-auto h-full"
+    >
+      <h2 className="font-black text-2xl mb-6" style={{ fontFamily: 'var(--font-display)' }}>Mi Perfil</h2>
+
+      {/* Info card */}
       <div className="card bg-[var(--card)] border border-[var(--border)] p-7 mb-5">
         <div className="flex items-center gap-5 mb-6">
-          <Avatar name={user.name} url={user.profilePictureUrl} size="lg"/>
+          <div className="relative">
+            {user.profilePictureUrl ? (
+              <img
+                src={user.profilePictureUrl}
+                alt={displayName}
+                className="w-20 h-20 rounded-full object-cover ring-2 ring-[var(--accent)]/30"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black text-2xl ring-2 ring-[var(--accent)]/30">
+                {displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+              </div>
+            )}
+            {user.profilePictureUrl && (
+              <button
+                onClick={removePhoto}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center hover:bg-red-600"
+                title="Eliminar foto"
+              >✕</button>
+            )}
+          </div>
           <div>
-            <h3 className="font-black text-xl">{user.name}</h3>
-            <p className="text-[var(--accent)] font-semibold">{user.role==='CLIENT'?'Cliente':'Profesional'}</p>
-            <p className="text-xs text-[var(--muted)] mt-1">Miembro desde {new Date(user.createdAt).toLocaleDateString('es-PE')}</p>
+            <h3 className="font-black text-xl">{displayName}</h3>
+            <p className="text-[var(--accent)] font-semibold">
+              {user.role === 'CLIENT' ? 'Cliente' : user.role === 'PROFESSIONAL' ? 'Profesional' : user.role}
+            </p>
+            <p className="text-xs text-[var(--muted)] mt-1">
+              Miembro desde {new Date(user.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </p>
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-3">
-          {[{l:'Email',v:user.email,i:'✉️'},{l:'Teléfono',v:user.phone??'—',i:'📱'},{l:'Rol',v:user.role==='CLIENT'?'Cliente':'Profesional',i:'🏷️'},{l:'ID',v:`#${user.id}`,i:'🆔'}].map(({l,v,i})=>(
-            <div key={l} className="bg-[var(--surface)] rounded-xl px-4 py-3">
-              <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{i} {l}</div>
-              <div className="font-semibold text-sm">{v}</div>
+          {[
+            { label: 'Email', value: displayEmail, icon: '✉️' },
+            { label: 'Teléfono', value: user.phone || '—', icon: '📱' },
+            { label: 'Rol', value: user.role === 'CLIENT' ? 'Cliente' : 'Profesional', icon: '🏷️' },
+            { label: 'ID', value: `#${user.id}`, icon: '🆔' },
+          ].map(({ label, value, icon }) => (
+            <div key={label} className="bg-[var(--surface)] rounded-xl px-4 py-3">
+              <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{icon} {label}</div>
+              <div className="font-semibold text-sm break-all">{value}</div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Foto de perfil */}
       <div className="card bg-[var(--card)] border border-[var(--border)] p-6 mb-5">
-        <h3 className="font-bold mb-3">📸 Foto de perfil</h3>
-        <p className="text-sm text-[var(--muted)] mb-4">Pega una URL de Cloudinary, Imgur o ImgBB (https://…)</p>
+        <h3 className="font-bold mb-1">📸 Foto de perfil</h3>
+        <p className="text-sm text-[var(--muted)] mb-4">
+          Sube tu foto a Cloudinary, Imgur o ImgBB y pega la URL (https://…)
+        </p>
         <div className="flex gap-2.5">
-          <input value={photoUrl} onChange={e=>setPhotoUrl(e.target.value)} placeholder="https://res.cloudinary.com/..." className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] flex-1 text-sm"/>
-          <button onClick={updatePhoto} disabled={saving||!photoUrl} className={cn('btn text-white',saving&&'loading')} style={{background:'var(--accent)',borderColor:'var(--accent)'}}>
-            {saving?'':'Guardar'}
+          <input
+            value={photoUrl}
+            onChange={e => setPhotoUrl(e.target.value)}
+            placeholder="https://res.cloudinary.com/..."
+            className="input input-bordered bg-[var(--surface)] border-[var(--border)] text-[var(--text)] flex-1 text-sm"
+          />
+          <button
+            onClick={updatePhoto}
+            disabled={saving || !photoUrl}
+            className={cn('btn text-white', saving && 'loading')}
+            style={{ background: 'var(--accent)', borderColor: 'var(--accent)' }}
+          >
+            {saving ? '' : 'Guardar'}
           </button>
         </div>
-        {photoErr&&<p className="text-error text-xs mt-2">{photoErr}</p>}
+        {photoErr && <p className="text-error text-xs mt-2">{photoErr}</p>}
       </div>
-      <button onClick={onLogout} className="btn btn-error text-white">🚪 Cerrar sesión</button>
+
+      {/* Cerrar sesión */}
+      <button onClick={logout} className="btn btn-error text-white">
+        🚪 Cerrar sesión
+      </button>
     </motion.div>
   );
 }
 
 // ─── Notifications Panel ──────────────────────────────────────────────────────
-function NotificationsPanel({ onClose }: { onClose:()=>void }) {
+function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const [notifs, setNotifs] = useState<Notification[]>([]);
-  useEffect(()=>{notificationsApi.getAll().then(setNotifs).catch(()=>{});},[]);
-  const ICONS: Record<string,string> = { BOOKING_CREATED:'📅',BOOKING_CONFIRMED:'✅',BOOKING_CANCELLED:'❌',BOOKING_COMPLETED:'🎉',PAYMENT_RECEIVED:'💳',NEW_MESSAGE:'💬',NEW_REVIEW:'⭐' };
-  const fmtDT=(s:string)=>new Date(s).toLocaleDateString('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+
+  useEffect(() => {
+    notificationsApi.getAll().then(setNotifs).catch(() => {});
+  }, []);
+
+  const TYPE_ICONS: Record<string, string> = {
+    BOOKING_CREATED: '📅', BOOKING_CONFIRMED: '✅', BOOKING_CANCELLED: '❌',
+    BOOKING_COMPLETED: '🎉', PAYMENT_RECEIVED: '💳', NEW_MESSAGE: '💬', NEW_REVIEW: '⭐',
+  };
+
+  const fmt = (s: string) => new Date(s).toLocaleDateString('es-PE', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
 
   return (
-    <motion.div initial={{opacity:0,y:-8,scale:.97}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:-8,scale:.97}} transition={{duration:.2}}
-      className="fixed top-16 right-4 w-80 bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl z-[1000] overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.97 }}
+      transition={{ duration: 0.2 }}
+      className="fixed top-16 right-4 w-80 bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl z-[1000] overflow-hidden"
+    >
       <div className="px-5 py-4 border-b border-[var(--border)] flex justify-between items-center">
-        <h3 className="font-bold" style={{fontFamily:'var(--font-display)'}}>Notificaciones</h3>
+        <h3 className="font-bold" style={{ fontFamily: 'var(--font-display)' }}>Notificaciones</h3>
         <div className="flex gap-2">
-          <button onClick={()=>notificationsApi.markAllRead().then(()=>setNotifs(p=>p.map(n=>({...n,isRead:true}))))} className="btn btn-ghost btn-xs text-[var(--muted)]">✓ Leídas</button>
+          <button
+            onClick={() => notificationsApi.markAllRead().then(() => setNotifs(p => p.map(n => ({ ...n, isRead: true }))))}
+            className="btn btn-ghost btn-xs text-[var(--muted)]"
+          >✓ Leídas</button>
           <button onClick={onClose} className="btn btn-ghost btn-xs text-[var(--muted)]">✕</button>
         </div>
       </div>
       <div className="max-h-96 overflow-auto">
-        {notifs.length===0 ? <p className="text-center text-[var(--muted)] py-8 text-sm">Sin notificaciones</p>
-        : notifs.map(n=>(
-          <div key={n.id} className={cn('px-5 py-3 border-b border-[var(--border)] flex gap-3 items-start',!n.isRead&&'bg-[var(--accent)]/5')}>
-            <span className="text-xl">{ICONS[n.type]??'🔔'}</span>
+        {notifs.length === 0 ? (
+          <p className="text-center text-[var(--muted)] py-8 text-sm">Sin notificaciones</p>
+        ) : notifs.map(n => (
+          <div
+            key={n.id}
+            className={cn(
+              'px-5 py-3 border-b border-[var(--border)] flex gap-3 items-start',
+              !n.isRead && 'bg-[var(--accent)]/5'
+            )}
+          >
+            <span className="text-xl">{TYPE_ICONS[n.type] ?? '🔔'}</span>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm">{n.title}</div>
               <div className="text-xs text-[var(--muted)] mt-0.5">{n.body}</div>
-              <div className="text-[10px] text-[var(--muted)] mt-1">{fmtDT(n.createdAt)}</div>
+              <div className="text-[10px] text-[var(--muted)] mt-1">{fmt(n.createdAt)}</div>
             </div>
-            {!n.isRead&&<div className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0 mt-1.5"/>}
+            {!n.isRead && <div className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0 mt-1.5" />}
           </div>
         ))}
       </div>
@@ -326,44 +672,36 @@ function NotificationsPanel({ onClose }: { onClose:()=>void }) {
   );
 }
 
-// ─── Chat View (placeholder) ──────────────────────────────────────────────────
-function ChatView() {
-  return (
-    <div className="flex items-center justify-center h-full flex-col gap-4 text-[var(--muted)]">
-      <div className="text-5xl">💬</div>
-      <p className="font-semibold text-[#e8e9f3]">Chat en tiempo real</p>
-      <p className="text-sm max-w-xs text-center">El chat vía WebSocket STOMP está implementado en el backend. Selecciona una reserva en el módulo de Reservas para chatear.</p>
-    </div>
-  );
-}
-
-// ─── App Shell ────────────────────────────────────────────────────────────────
+// ─── App Shell (requiere AuthProvider como wrapper) ───────────────────────────
 function AppShell() {
-  const { isAuthenticated, login, logout, userName, userId } = useAuth();
+  const { isAuthenticated, userName } = useAuth();
   const [view, setView] = useState<View>('map');
   const [unread, setUnread] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
-  const [authData, setAuthData] = useState<AuthResponse|null>(null);
 
-  const handleLogin = useCallback((data: AuthResponse) => { login(data); setAuthData(data); }, [login]);
-  const handleLogout = useCallback(() => { logout(); setAuthData(null); }, [logout]);
-
+  // Polling de no leídos cada 30s
   useEffect(() => {
     if (!isAuthenticated) return;
-    const fetch = () => notificationsApi.unreadCount().then(d=>setUnread(d.unreadCount)).catch(()=>{});
+    const fetch = () => notificationsApi.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => {});
     fetch();
-    const id = setInterval(fetch, 30000);
+    const id = setInterval(fetch, 30_000);
     return () => clearInterval(id);
   }, [isAuthenticated]);
 
-  if (!isAuthenticated) return <AuthPage onLogin={handleLogin} />;
+  // También contar mensajes no leídos
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    messagesApi.unreadCount().then(d => setUnread(prev => prev + d.unreadCount)).catch(() => {});
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) return <AuthPage />;
 
   const NAV = [
-    { id:'map',           icon:'🗺️',  label:'Mapa' },
-    { id:'professionals', icon:'👥',  label:'Profesionales' },
-    { id:'bookings',      icon:'📋',  label:'Reservas' },
-    { id:'chat',          icon:'💬',  label:'Chat' },
-    { id:'profile',       icon:'👤',  label:'Perfil' },
+    { id: 'map',           icon: '🗺️',  label: 'Mapa' },
+    { id: 'professionals', icon: '👥',  label: 'Profesionales' },
+    { id: 'bookings',      icon: '📋',  label: 'Reservas' },
+    { id: 'chat',          icon: '💬',  label: 'Chat' },
+    { id: 'profile',       icon: '👤',  label: 'Perfil' },
   ] as const;
 
   return (
@@ -372,45 +710,81 @@ function AppShell() {
       <header className="h-14 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between px-5 shrink-0 z-50">
         <div className="flex items-center gap-2.5">
           <span className="text-xl">🔗</span>
-          <span className="font-black text-lg" style={{fontFamily:'var(--font-display)',background:'linear-gradient(135deg,#6c63ff,#ff6584)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>ServiLink</span>
+          <span
+            className="font-black text-lg"
+            style={{
+              fontFamily: 'var(--font-display)',
+              background: 'linear-gradient(135deg, #6c63ff, #ff6584)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >ServiLink</span>
         </div>
+
         <nav className="flex gap-1">
-          {NAV.map(({id,icon,label})=>(
-            <button key={id} onClick={()=>setView(id)}
-              className={cn('btn btn-ghost btn-sm gap-1.5 text-xs font-semibold relative',view===id?'text-[var(--accent)] bg-[var(--accent)]/10':'text-[var(--muted)]')}>
+          {NAV.map(({ id, icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setView(id)}
+              className={cn(
+                'btn btn-ghost btn-sm gap-1.5 text-xs font-semibold relative',
+                view === id ? 'text-[var(--accent)] bg-[var(--accent)]/10' : 'text-[var(--muted)]'
+              )}
+            >
               {icon} {label}
-              {id==='bookings'&&unread>0&&<span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--accent2)]"/>}
+              {id === 'chat' && unread > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--accent2)]" />
+              )}
             </button>
           ))}
         </nav>
+
         <div className="flex items-center gap-3">
-          <button onClick={()=>setShowNotifs(p=>!p)} className="btn btn-ghost btn-sm btn-circle relative text-[var(--muted)] text-lg">
+          <button
+            onClick={() => setShowNotifs(p => !p)}
+            className="btn btn-ghost btn-sm btn-circle relative text-[var(--muted)] text-lg"
+          >
             🔔
-            {unread>0&&<span className="badge badge-xs badge-error absolute -top-0.5 -right-0.5 text-[9px] font-bold min-w-4">{unread>9?'9+':unread}</span>}
+            {unread > 0 && (
+              <span className="badge badge-xs badge-error absolute -top-0.5 -right-0.5 text-[9px] font-bold min-w-4">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
           </button>
-          <span className="text-sm font-semibold text-[var(--text)]">{userName?.split(' ')[0]}</span>
+          <span className="text-sm font-semibold text-[var(--text)]">
+            {(userName ?? 'Usuario').split(' ')[0]}
+          </span>
         </div>
       </header>
 
-      {/* Main */}
+      {/* Main content */}
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
-          <motion.div key={view} className="h-full" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:.15}}>
-            {view==='map'           && <MapView/>}
-            {view==='professionals' && <ProfessionalsView/>}
-            {view==='bookings'      && <BookingsPage/>}
-            {view==='chat'          && <ChatView/>}
-            {view==='profile'       && <ProfileView onLogout={handleLogout}/>}
+          <motion.div
+            key={view}
+            className="h-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            {view === 'map'           && <MapView />}
+            {view === 'professionals' && <ProfessionalsView />}
+            {view === 'bookings'      && <BookingsPage />}
+            {view === 'chat'          && <ChatView />}
+            {view === 'profile'       && <ProfileView />}
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* Notifications */}
+      {/* Notifications overlay */}
       <AnimatePresence>
-        {showNotifs&&<>
-          <div className="fixed inset-0 z-[999]" onClick={()=>setShowNotifs(false)}/>
-          <NotificationsPanel onClose={()=>setShowNotifs(false)}/>
-        </>}
+        {showNotifs && (
+          <>
+            <div className="fixed inset-0 z-[999]" onClick={() => setShowNotifs(false)} />
+            <NotificationsPanel onClose={() => setShowNotifs(false)} />
+          </>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -420,7 +794,7 @@ function AppShell() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppShell/>
+      <AppShell />
     </AuthProvider>
   );
 }
