@@ -7,6 +7,8 @@ import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 import BookingsPage from './pages/BookingsPage';
+import ProfessionalDashboardPage from './pages/ProfessionalDashboardPage';
+import AvailabilityPage from './pages/AvailabilityPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
 import type { Professional, Notification, User, Review, Role } from './types';
@@ -20,7 +22,7 @@ L.Marker.prototype.options.icon = L.icon({
   popupAnchor: [1, -34],
 });
 
-type View = 'map' | 'bookings' | 'professionals' | 'chat' | 'profile';
+type View = 'map' | 'bookings' | 'professionals' | 'chat' | 'profile' | 'dashboard' | 'availability';
 
 // ─── Tiny helpers ──────────────────────────────────────────────────────────────
 function cn(...c: (string | false | undefined | null)[]) {
@@ -346,7 +348,7 @@ function MapView() {
 }
 
 // ─── Professionals View ───────────────────────────────────────────────────────
-function ProfessionalsView() {
+function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Professional) => void }) {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -414,6 +416,7 @@ function ProfessionalsView() {
                 </div>
               )}
               <button
+                onClick={() => onViewAvailability(p)}
                 className="btn btn-sm w-full text-white text-xs"
                 style={{ background: 'var(--accent)', borderColor: 'var(--accent)' }}
               >
@@ -674,10 +677,11 @@ function NotificationsPanel({ onClose }: { onClose: () => void }) {
 
 // ─── App Shell (requiere AuthProvider como wrapper) ───────────────────────────
 function AppShell() {
-  const { isAuthenticated, userName } = useAuth();
+  const { isAuthenticated, userName, role } = useAuth();
   const [view, setView] = useState<View>('map');
   const [unread, setUnread] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [selectedProfessional, setSelectedProfessional] = useState<{ id: number; name: string } | null>(null);
 
   // Polling de no leídos cada 30s
   useEffect(() => {
@@ -697,12 +701,16 @@ function AppShell() {
   if (!isAuthenticated) return <AuthPage />;
 
   const NAV = [
-    { id: 'map',           icon: '🗺️',  label: 'Mapa' },
-    { id: 'professionals', icon: '👥',  label: 'Profesionales' },
-    { id: 'bookings',      icon: '📋',  label: 'Reservas' },
-    { id: 'chat',          icon: '💬',  label: 'Chat' },
-    { id: 'profile',       icon: '👤',  label: 'Perfil' },
-  ] as const;
+    ...(role === 'PROFESSIONAL' ? [
+      { id: 'dashboard' as View,    icon: '📊', label: 'Dashboard' },
+      { id: 'availability' as View, icon: '📅', label: 'Horarios' }
+    ] : []),
+    { id: 'map' as View,           icon: '🗺️',  label: 'Mapa' },
+    { id: 'professionals' as View, icon: '👥',  label: 'Profesionales' },
+    { id: 'bookings' as View,      icon: '📋',  label: 'Reservas' },
+    { id: 'chat' as View,          icon: '💬',  label: 'Chat' },
+    { id: 'profile' as View,       icon: '👤',  label: 'Perfil' },
+  ];
 
   return (
     <div data-theme="dark" className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
@@ -725,7 +733,10 @@ function AppShell() {
           {NAV.map(({ id, icon, label }) => (
             <button
               key={id}
-              onClick={() => setView(id)}
+              onClick={() => {
+                setView(id);
+                setSelectedProfessional(null);
+              }}
               className={cn(
                 'btn btn-ghost btn-sm gap-1.5 text-xs font-semibold relative',
                 view === id ? 'text-[var(--accent)] bg-[var(--accent)]/10' : 'text-[var(--muted)]'
@@ -769,10 +780,24 @@ function AppShell() {
             transition={{ duration: 0.15 }}
           >
             {view === 'map'           && <MapView />}
-            {view === 'professionals' && <ProfessionalsView />}
+            {view === 'professionals' && (
+              <ProfessionalsView
+                onViewAvailability={(p) => {
+                  setSelectedProfessional({ id: p.id, name: p.userName });
+                  setView('availability');
+                }}
+              />
+            )}
             {view === 'bookings'      && <BookingsPage />}
             {view === 'chat'          && <ChatView />}
             {view === 'profile'       && <ProfileView />}
+            {view === 'dashboard'     && <ProfessionalDashboardPage />}
+            {view === 'availability'  && (
+              <AvailabilityPage
+                publicProfessionalId={selectedProfessional?.id}
+                publicProfessionalName={selectedProfessional?.name}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
