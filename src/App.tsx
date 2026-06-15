@@ -9,11 +9,12 @@ import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 import BookingsPage from './pages/BookingsPage';
 import ProfessionalDashboardPage from './pages/ProfessionalDashboardPage';
 import AvailabilityPage from './pages/AvailabilityPage';
+import ProfessionalOnboardingPage from './pages/ProfessionalOnboardingPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
 import type { Professional, Notification, User, Review, Role } from './types';
 
-// Fix Leaflet default icons (Vite no resuelve las URLs automáticamente)
+// Fix Leaflet default icons
 L.Marker.prototype.options.icon = L.icon({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -24,7 +25,6 @@ L.Marker.prototype.options.icon = L.icon({
 
 type View = 'map' | 'bookings' | 'professionals' | 'chat' | 'profile' | 'dashboard' | 'availability';
 
-// ─── Tiny helpers ──────────────────────────────────────────────────────────────
 function cn(...c: (string | false | undefined | null)[]) {
   return c.filter(Boolean).join(' ');
 }
@@ -49,7 +49,6 @@ function AuthPage() {
       const res = mode === 'login'
         ? await authApi.login({ email: form.email, password: form.password })
         : await authApi.register(form);
-      // context.login guarda todo en localStorage y actualiza estado
       login(res);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error inesperado');
@@ -69,7 +68,6 @@ function AuthPage() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-sm"
       >
-        {/* Logo */}
         <div className="text-center mb-10">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
@@ -91,7 +89,6 @@ function AuthPage() {
 
         <div className="card bg-[var(--card)] border border-[var(--border)] shadow-2xl">
           <div className="card-body gap-5">
-            {/* Tabs */}
             <div className="tabs tabs-box bg-[var(--surface)] rounded-xl p-1">
               {(['login', 'register'] as const).map(m => (
                 <button
@@ -199,10 +196,11 @@ function Avatar({ name, url, size = 'md' }: { name: string; url?: string; size?:
 }
 
 function Stars({ r }: { r: number }) {
+  const rating = Math.max(0, Math.min(5, Math.round(r || 0)));
   return (
     <span className="text-amber-400 text-sm">
-      {'★'.repeat(Math.round(r))}
-      <span className="text-white/20">{'★'.repeat(5 - Math.round(r))}</span>
+      {'★'.repeat(rating)}
+      <span className="text-white/20">{'★'.repeat(5 - rating)}</span>
     </span>
   );
 }
@@ -228,7 +226,6 @@ function MapView() {
 
   return (
     <div className="flex h-full">
-      {/* Mapa Leaflet real */}
       <div className="flex-1 relative">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#1a2035]/80 z-[1000] text-[var(--muted)]">
@@ -248,7 +245,7 @@ function MapView() {
                 <div className="text-sm">
                   <p className="font-bold">{p.userName}</p>
                   <p style={{ color: '#6c63ff' }}>{p.specialty}</p>
-                  <p className="text-gray-500 text-xs">S/. {p.baseRate}/hr · ★{p.averageRating.toFixed(1)}</p>
+                  <p className="text-gray-500 text-xs">S/. {p.baseRate}/hr · ★{(p.averageRating ?? 0).toFixed(1)}</p>
                 </div>
               </Popup>
             </Marker>
@@ -259,7 +256,6 @@ function MapView() {
         </div>
       </div>
 
-      {/* Sidebar */}
       <div className="w-80 border-l border-[var(--border)] overflow-auto bg-[var(--surface)]">
         <AnimatePresence mode="wait">
           {selected ? (
@@ -272,7 +268,7 @@ function MapView() {
                   <p className="text-[var(--accent)] text-sm">{selected.specialty}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <Stars r={selected.averageRating} />
-                    <span className="text-xs text-[var(--muted)]">{selected.averageRating.toFixed(1)} ({selected.totalReviews})</span>
+                    <span className="text-xs text-[var(--muted)]">{(selected.averageRating ?? 0).toFixed(1)} ({selected.totalReviews})</span>
                     {selected.isVerified && <span className="badge badge-success badge-xs">✓</span>}
                   </div>
                 </div>
@@ -332,7 +328,7 @@ function MapView() {
                         <div className="text-xs text-[var(--accent)]">{p.specialty}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs font-bold text-yellow-400">★ {p.averageRating.toFixed(1)}</div>
+                        <div className="text-xs font-bold text-yellow-400">★ {(p.averageRating ?? 0).toFixed(1)}</div>
                         <div className="text-xs text-[var(--muted)]">S/. {p.baseRate}/hr</div>
                       </div>
                     </div>
@@ -404,7 +400,7 @@ function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Pro
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-1.5">
                   <Stars r={p.averageRating} />
-                  <span className="text-xs text-[var(--muted)]">{p.averageRating.toFixed(1)} ({p.totalReviews})</span>
+                  <span className="text-xs text-[var(--muted)]">{(p.averageRating ?? 0).toFixed(1)} ({p.totalReviews})</span>
                 </div>
                 <span className="font-bold text-emerald-400 text-sm">S/. {p.baseRate}/hr</span>
               </div>
@@ -458,7 +454,6 @@ function ProfileView() {
     usersApi.me()
       .then(setUser)
       .catch(() => {
-        // Si falla la API, usar datos del context como fallback
         if (userName && userEmail && role && userId) {
           setUser({
             id: userId,
@@ -512,12 +507,7 @@ function ProfileView() {
       <div className="flex items-center justify-center h-full text-[var(--muted)] flex-col gap-3">
         <div className="text-4xl">⚠️</div>
         <p>No se pudo cargar el perfil</p>
-        <button
-          onClick={logout}
-          className="btn btn-error btn-sm text-white"
-        >
-          Cerrar sesión
-        </button>
+        <button onClick={logout} className="btn btn-error btn-sm text-white">Cerrar sesión</button>
       </div>
     );
   }
@@ -533,7 +523,6 @@ function ProfileView() {
     >
       <h2 className="font-black text-2xl mb-6" style={{ fontFamily: 'var(--font-display)' }}>Mi Perfil</h2>
 
-      {/* Info card */}
       <div className="card bg-[var(--card)] border border-[var(--border)] p-7 mb-5">
         <div className="flex items-center gap-5 mb-6">
           <div className="relative">
@@ -582,7 +571,6 @@ function ProfileView() {
         </div>
       </div>
 
-      {/* Foto de perfil */}
       <div className="card bg-[var(--card)] border border-[var(--border)] p-6 mb-5">
         <h3 className="font-bold mb-1">📸 Foto de perfil</h3>
         <p className="text-sm text-[var(--muted)] mb-4">
@@ -607,7 +595,6 @@ function ProfileView() {
         {photoErr && <p className="text-error text-xs mt-2">{photoErr}</p>}
       </div>
 
-      {/* Cerrar sesión */}
       <button onClick={logout} className="btn btn-error text-white">
         🚪 Cerrar sesión
       </button>
@@ -675,7 +662,7 @@ function NotificationsPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── App Shell (requiere AuthProvider como wrapper) ───────────────────────────
+// ─── App Shell ────────────────────────────────────────────────────────────────
 function AppShell() {
   const { isAuthenticated, userName, role } = useAuth();
   const [view, setView] = useState<View>('map');
@@ -683,22 +670,58 @@ function AppShell() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<{ id: number; name: string } | null>(null);
 
-  // Polling de no leídos cada 30s
+  // ─── Onboarding state ──────────────────────────────────────────────────────
+  // null = todavía verificando, false = no necesita onboarding, true = necesita
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
+
+  // Verificar si el profesional recién logueado ya tiene perfil
+  useEffect(() => {
+    if (!isAuthenticated) { setNeedsOnboarding(null); return; }
+    if (role !== 'PROFESSIONAL') { setNeedsOnboarding(false); return; }
+
+    professionalsApi.me()
+      .then(() => setNeedsOnboarding(false))   // ya tiene perfil → sin onboarding
+      .catch(() => setNeedsOnboarding(true));   // 404 o error → necesita crear perfil
+  }, [isAuthenticated, role]);
+
+  // Polling unread cada 30s
   useEffect(() => {
     if (!isAuthenticated) return;
-    const fetch = () => notificationsApi.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => { });
-    fetch();
-    const id = setInterval(fetch, 30_000);
+    const fetchUnread = () =>
+      notificationsApi.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => { });
+    fetchUnread();
+    const id = setInterval(fetchUnread, 30_000);
     return () => clearInterval(id);
   }, [isAuthenticated]);
 
-  // También contar mensajes no leídos
   useEffect(() => {
     if (!isAuthenticated) return;
     messagesApi.unreadCount().then(d => setUnread(prev => prev + d.unreadCount)).catch(() => { });
   }, [isAuthenticated]);
 
+  // ── No autenticado
   if (!isAuthenticated) return <AuthPage />;
+
+  // ── Verificando si necesita onboarding (solo para PROFESSIONAL)
+  if (role === 'PROFESSIONAL' && needsOnboarding === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0c0d14]">
+        <div className="flex items-center gap-3 text-[#6b6d8a]">
+          <div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin" />
+          Verificando perfil...
+        </div>
+      </div>
+    );
+  }
+
+  // ── Profesional sin perfil → onboarding
+  if (role === 'PROFESSIONAL' && needsOnboarding === true) {
+    return (
+      <ProfessionalOnboardingPage
+        onCompleted={() => setNeedsOnboarding(false)}
+      />
+    );
+  }
 
   const NAV = [
     ...(role === 'PROFESSIONAL' ? [
@@ -768,7 +791,7 @@ function AppShell() {
         </div>
       </header>
 
-      {/* Main content */}
+      {/* Main */}
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div

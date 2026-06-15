@@ -49,10 +49,11 @@ function ErrMsg({ msg }: { msg: string }) {
   return <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{msg}</div>;
 }
 function Stars({ r }: { r: number }) {
+  const rating = Math.max(0, Math.min(5, Math.round(r || 0)));
   return (
     <span className="text-sm">
-      <span className="text-amber-400">{'★'.repeat(Math.round(r))}</span>
-      <span className="text-white/15">{'★'.repeat(5 - Math.round(r))}</span>
+      <span className="text-amber-400">{'★'.repeat(rating)}</span>
+      <span className="text-white/15">{'★'.repeat(5 - rating)}</span>
     </span>
   );
 }
@@ -218,7 +219,7 @@ function CreateModal({ open, onClose, onCreated }: {
                     <div className="text-xs text-[#6c63ff] font-medium">{p.specialty}</div>
                     <div className="flex items-center gap-3 mt-1">
                       <Stars r={p.averageRating} />
-                      <span className="text-[10px] text-[#6b6d8a]">{p.averageRating.toFixed(1)} ({p.totalReviews})</span>
+                      <span className="text-[10px] text-[#6b6d8a]">{(p.averageRating ?? 0).toFixed(1)} ({p.totalReviews})</span>
                       <span className="text-xs font-bold text-emerald-400">S/. {p.baseRate}/hr</span>
                     </div>
                   </div>

@@ -62,7 +62,7 @@ export function Avatar({
 
 // ─── Stars ────────────────────────────────────────────────────────────────────
 export function Stars({ rating, max = 5 }: { rating: number; max?: number }) {
-  const filled = Math.round(rating);
+  const filled = Math.max(0, Math.min(max, Math.round(rating || 0)));
   return (
     <span className="text-amber-400 tracking-wide text-sm leading-none">
       {'★'.repeat(filled)}
