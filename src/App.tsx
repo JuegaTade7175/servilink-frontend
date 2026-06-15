@@ -175,7 +175,7 @@ function AuthPage() {
             </button>
 
             <p className="text-center text-xs text-[var(--muted)]">
-              Demo: carlos@servilink.pe / password123
+              Demo: juan.rios@servilink.pe / password123
             </p>
           </div>
         </div>
@@ -217,7 +217,7 @@ function MapView() {
   useEffect(() => {
     professionalsApi.nearby(-12.0464, -77.0428, 20)
       .then(setProfessionals)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -356,7 +356,7 @@ function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Pro
   useEffect(() => {
     professionalsApi.nearby(-12.0464, -77.0428, 30)
       .then(setProfessionals)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -620,7 +620,7 @@ function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const [notifs, setNotifs] = useState<Notification[]>([]);
 
   useEffect(() => {
-    notificationsApi.getAll().then(setNotifs).catch(() => {});
+    notificationsApi.getAll().then(setNotifs).catch(() => { });
   }, []);
 
   const TYPE_ICONS: Record<string, string> = {
@@ -686,7 +686,7 @@ function AppShell() {
   // Polling de no leídos cada 30s
   useEffect(() => {
     if (!isAuthenticated) return;
-    const fetch = () => notificationsApi.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => {});
+    const fetch = () => notificationsApi.unreadCount().then(d => setUnread(d.unreadCount)).catch(() => { });
     fetch();
     const id = setInterval(fetch, 30_000);
     return () => clearInterval(id);
@@ -695,21 +695,21 @@ function AppShell() {
   // También contar mensajes no leídos
   useEffect(() => {
     if (!isAuthenticated) return;
-    messagesApi.unreadCount().then(d => setUnread(prev => prev + d.unreadCount)).catch(() => {});
+    messagesApi.unreadCount().then(d => setUnread(prev => prev + d.unreadCount)).catch(() => { });
   }, [isAuthenticated]);
 
   if (!isAuthenticated) return <AuthPage />;
 
   const NAV = [
     ...(role === 'PROFESSIONAL' ? [
-      { id: 'dashboard' as View,    icon: '📊', label: 'Dashboard' },
+      { id: 'dashboard' as View, icon: '📊', label: 'Dashboard' },
       { id: 'availability' as View, icon: '📅', label: 'Horarios' }
     ] : []),
-    { id: 'map' as View,           icon: '🗺️',  label: 'Mapa' },
-    { id: 'professionals' as View, icon: '👥',  label: 'Profesionales' },
-    { id: 'bookings' as View,      icon: '📋',  label: 'Reservas' },
-    { id: 'chat' as View,          icon: '💬',  label: 'Chat' },
-    { id: 'profile' as View,       icon: '👤',  label: 'Perfil' },
+    { id: 'map' as View, icon: '🗺️', label: 'Mapa' },
+    { id: 'professionals' as View, icon: '👥', label: 'Profesionales' },
+    { id: 'bookings' as View, icon: '📋', label: 'Reservas' },
+    { id: 'chat' as View, icon: '💬', label: 'Chat' },
+    { id: 'profile' as View, icon: '👤', label: 'Perfil' },
   ];
 
   return (
@@ -779,7 +779,7 @@ function AppShell() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
           >
-            {view === 'map'           && <MapView />}
+            {view === 'map' && <MapView />}
             {view === 'professionals' && (
               <ProfessionalsView
                 onViewAvailability={(p) => {
@@ -788,11 +788,11 @@ function AppShell() {
                 }}
               />
             )}
-            {view === 'bookings'      && <BookingsPage />}
-            {view === 'chat'          && <ChatView />}
-            {view === 'profile'       && <ProfileView />}
-            {view === 'dashboard'     && <ProfessionalDashboardPage />}
-            {view === 'availability'  && (
+            {view === 'bookings' && <BookingsPage />}
+            {view === 'chat' && <ChatView />}
+            {view === 'profile' && <ProfileView />}
+            {view === 'dashboard' && <ProfessionalDashboardPage />}
+            {view === 'availability' && (
               <AvailabilityPage
                 publicProfessionalId={selectedProfessional?.id}
                 publicProfessionalName={selectedProfessional?.name}
