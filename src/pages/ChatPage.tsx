@@ -513,6 +513,7 @@ export default function ChatPage() {
       .then(data => {
         if (!Array.isArray(data)) {
           setBookings([]);
+          setLoading(false);
           return;
         }
         // Solo reservas no canceladas primero, luego canceladas

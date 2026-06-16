@@ -10,6 +10,7 @@ import BookingsPage from './pages/BookingsPage';
 import ProfessionalDashboardPage from './pages/ProfessionalDashboardPage';
 import AvailabilityPage from './pages/AvailabilityPage';
 import ProfessionalOnboardingPage from './pages/ProfessionalOnboardingPage';
+import ChatPage from './pages/ChatPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
 import type { Professional, Notification, User, Review, Role } from './types';
