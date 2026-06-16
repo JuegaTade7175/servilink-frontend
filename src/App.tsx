@@ -426,20 +426,6 @@ function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Pro
   );
 }
 
-// ─── Chat View ────────────────────────────────────────────────────────────────
-function ChatView() {
-  return (
-    <div className="flex items-center justify-center h-full flex-col gap-4 text-[var(--muted)]">
-      <div className="text-5xl">💬</div>
-      <p className="font-semibold text-[#e8e9f3]">Chat en tiempo real</p>
-      <p className="text-sm max-w-xs text-center">
-        El chat vía WebSocket STOMP está implementado en el backend.
-        Selecciona una reserva en el módulo de Reservas para chatear.
-      </p>
-    </div>
-  );
-}
-
 // ─── Profile View ─────────────────────────────────────────────────────────────
 function ProfileView() {
   const { logout, userName, userEmail, role, userId } = useAuth();
@@ -812,7 +798,7 @@ function AppShell() {
               />
             )}
             {view === 'bookings' && <BookingsPage />}
-            {view === 'chat' && <ChatView />}
+            {view === 'chat' && <ChatPage />}
             {view === 'profile' && <ProfileView />}
             {view === 'dashboard' && <ProfessionalDashboardPage />}
             {view === 'availability' && (
