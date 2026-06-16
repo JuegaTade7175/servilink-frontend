@@ -1,4 +1,3 @@
-// ─── Enums ────────────────────────────────────────────────────────────────────
 export type Role = 'CLIENT' | 'PROFESSIONAL' | 'ADMIN';
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type ConfirmationStatus = 'PENDING' | 'CONFIRMED' | 'EXPIRED' | 'CANCELLED';
@@ -11,7 +10,6 @@ export type DayOfWeek =
   | 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY'
   | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
 export interface AuthResponse {
   token: string;
   type: string;
@@ -25,7 +23,6 @@ export interface RegisterRequest {
   name: string; email: string; password: string; phone: string; role: Role;
 }
 
-// ─── User — espejo de UserResponse del backend ────────────────────────────────
 export interface User {
   id: number;
   name: string;
@@ -36,7 +33,6 @@ export interface User {
   createdAt: string;
 }
 
-// ─── ServiceItem — espejo de ServiceResponse del backend ──────────────────────
 export interface ServiceItem {
   id: number;
   name: string;
@@ -47,11 +43,6 @@ export interface ServiceItem {
   categoryName?: string;
 }
 
-// ─── Professional — espejo EXACTO de ProfessionalResponse del backend ─────────
-// El backend devuelve: id, userId, userName, userEmail, userPhone,
-// profilePictureUrl, specialty, description, latitude, longitude, address,
-// coverageRadiusKm, baseRate, isVerified, averageRating, totalReviews,
-// certifications, distanceKm, services (ServiceResponse[])
 export interface Professional {
   id: number;
   userId: number;
@@ -74,7 +65,6 @@ export interface Professional {
   services: ServiceItem[];
 }
 
-// ─── GeoPoint — espejo de GeoPointResponse del backend ───────────────────────
 export interface GeoPoint {
   professionalId: number;
   name: string;
@@ -87,7 +77,6 @@ export interface GeoPoint {
   isVerified: boolean;
 }
 
-// ─── Category ─────────────────────────────────────────────────────────────────
 export interface Category {
   id: number;
   name: string;
@@ -95,11 +84,6 @@ export interface Category {
   iconUrl?: string;
 }
 
-// ─── Booking — espejo de BookingResponse del backend ─────────────────────────
-// El backend devuelve: id, clientId, clientName, professionalId,
-// professionalName, serviceId, serviceName, scheduledAt, address,
-// description, status, createdAt
-// NOTA: el backend NO devuelve "notes" ni "totalPrice" — esos campos no existen
 export interface Booking {
   id: number;
   clientId: number;
@@ -125,7 +109,6 @@ export interface CreateBookingRequest {
   description?: string;
 }
 
-// ─── BookingConfirmation ──────────────────────────────────────────────────────
 export interface BookingConfirmation {
   id: number;
   bookingId: number;
@@ -140,7 +123,6 @@ export interface BookingConfirmation {
   createdAt: string;
 }
 
-// ─── Payment ──────────────────────────────────────────────────────────────────
 export interface Payment {
   id: number;
   bookingId: number;
@@ -152,7 +134,6 @@ export interface Payment {
   createdAt: string;
 }
 
-// ─── Message ──────────────────────────────────────────────────────────────────
 export interface Message {
   id: number;
   bookingId: number;
@@ -165,7 +146,6 @@ export interface Message {
   createdAt: string;
 }
 
-// ─── Notification ─────────────────────────────────────────────────────────────
 export interface Notification {
   id: number;
   title: string;
@@ -176,7 +156,6 @@ export interface Notification {
   createdAt: string;
 }
 
-// ─── Review ───────────────────────────────────────────────────────────────────
 export interface Review {
   id: number;
   bookingId: number;
@@ -189,17 +168,14 @@ export interface Review {
   createdAt: string;
 }
 
-// ─── Availability — espejo de AvailabilityResponse del backend ────────────────
 export interface Availability {
   id: number;
   dayOfWeek: DayOfWeek;
-  startTime: string;   // "HH:mm:ss" — así lo devuelve el backend
+  startTime: string;
   endTime: string;
   isAvailable: boolean;
 }
 
-// ─── DTOs para crear/actualizar en el backend ─────────────────────────────────
-// Crear perfil profesional — espejo de CreateProfessionalRequest del backend
 export interface CreateProfessionalRequest {
   specialty: string;
   description?: string;
@@ -211,7 +187,6 @@ export interface CreateProfessionalRequest {
   certifications?: string;
 }
 
-// Actualizar perfil profesional — espejo de UpdateProfessionalRequest del backend
 export interface UpdateProfessionalRequest {
   specialty?: string;
   description?: string;

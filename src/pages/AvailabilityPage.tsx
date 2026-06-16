@@ -4,30 +4,27 @@ import { availabilityApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import type { Availability, DayOfWeek } from '../types';
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
 function cn(...c: (string | false | undefined | null)[]) {
   return c.filter(Boolean).join(' ');
 }
 
 const DAYS: { value: DayOfWeek; label: string; short: string }[] = [
-  { value: 'MONDAY',    label: 'Lunes',     short: 'Lun' },
-  { value: 'TUESDAY',   label: 'Martes',    short: 'Mar' },
+  { value: 'MONDAY', label: 'Lunes', short: 'Lun' },
+  { value: 'TUESDAY', label: 'Martes', short: 'Mar' },
   { value: 'WEDNESDAY', label: 'Miércoles', short: 'Mié' },
-  { value: 'THURSDAY',  label: 'Jueves',    short: 'Jue' },
-  { value: 'FRIDAY',    label: 'Viernes',   short: 'Vie' },
-  { value: 'SATURDAY',  label: 'Sábado',    short: 'Sáb' },
-  { value: 'SUNDAY',    label: 'Domingo',   short: 'Dom' },
+  { value: 'THURSDAY', label: 'Jueves', short: 'Jue' },
+  { value: 'FRIDAY', label: 'Viernes', short: 'Vie' },
+  { value: 'SATURDAY', label: 'Sábado', short: 'Sáb' },
+  { value: 'SUNDAY', label: 'Domingo', short: 'Dom' },
 ];
 
 function fmt12(t: string) {
-  // "08:00:00" → "8:00 AM"
   const [h, m] = t.split(':').map(Number);
   const ampm = h >= 12 ? 'PM' : 'AM';
-  const h12  = h % 12 || 12;
+  const h12 = h % 12 || 12;
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-// ─── micro UI ─────────────────────────────────────────────────────────────────
 function Spinner() {
   return (
     <div className="w-5 h-5 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin" />
@@ -56,7 +53,6 @@ function ToastMsg({ msg, type }: { msg: string; type: 'success' | 'error' }) {
   );
 }
 
-// ─── Modal crear/editar horario ───────────────────────────────────────────────
 function SlotModal({
   open, onClose, onSaved, editing,
 }: {
@@ -65,12 +61,12 @@ function SlotModal({
   onSaved: (a: Availability) => void;
   editing: Availability | null;
 }) {
-  const [day, setDay]       = useState<DayOfWeek>('MONDAY');
-  const [start, setStart]   = useState('08:00');
-  const [end, setEnd]       = useState('18:00');
-  const [avail, setAvail]   = useState(true);
+  const [day, setDay] = useState<DayOfWeek>('MONDAY');
+  const [start, setStart] = useState('08:00');
+  const [end, setEnd] = useState('18:00');
+  const [avail, setAvail] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [err, setErr]       = useState('');
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -129,7 +125,7 @@ function SlotModal({
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Día — solo al crear */}
+          { }
           {!editing && (
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">Día de la semana</label>
@@ -160,7 +156,7 @@ function SlotModal({
             </div>
           )}
 
-          {/* Horas */}
+          { }
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">Hora inicio</label>
@@ -182,7 +178,7 @@ function SlotModal({
             </div>
           </div>
 
-          {/* Disponible toggle — solo al editar */}
+          { }
           {editing && (
             <div className="flex items-center justify-between p-3 bg-[#13141f] rounded-xl border border-[#252640]">
               <span className="text-sm text-[#e8e9f3]">Disponible</span>
@@ -224,7 +220,6 @@ function SlotModal({
   );
 }
 
-// ─── Vista pública: horarios de un profesional ────────────────────────────────
 function PublicAvailabilityView({ professionalId, professionalName }: {
   professionalId: number;
   professionalName: string;
@@ -235,7 +230,7 @@ function PublicAvailabilityView({ professionalId, professionalName }: {
   useEffect(() => {
     availabilityApi.getByProfessional(professionalId)
       .then(setSlots)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [professionalId]);
 
@@ -286,13 +281,12 @@ function PublicAvailabilityView({ professionalId, professionalName }: {
   );
 }
 
-// ─── Vista profesional: gestión de SUS horarios ───────────────────────────────
 function MyAvailabilityView({ professionalId }: { professionalId: number }) {
-  const [slots, setSlots]     = useState<Availability[]>([]);
+  const [slots, setSlots] = useState<Availability[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Availability | null>(null);
-  const [toast, setToast]     = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
 
   const showT = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -337,9 +331,8 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
   };
 
   const openCreate = () => { setEditing(null); setShowModal(true); };
-  const openEdit   = (s: Availability) => { setEditing(s); setShowModal(true); };
+  const openEdit = (s: Availability) => { setEditing(s); setShowModal(true); };
 
-  // Agrupar por día para la vista de calendario semanal
   const byDay = DAYS.map(d => ({
     ...d,
     slots: slots.filter(s => s.dayOfWeek === d.value),
@@ -350,7 +343,7 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
       {toast && <ToastMsg msg={toast.msg} type={toast.type} />}
 
       <div className="p-6 h-full overflow-y-auto">
-        {/* Header */}
+        { }
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2
@@ -388,7 +381,6 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
             </button>
           </div>
         ) : (
-          /* Calendario semanal */
           <div className="space-y-2">
             {byDay.map(d => (
               <motion.div
@@ -397,7 +389,7 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-[#13141f] rounded-xl border border-[#252640] overflow-hidden"
               >
-                {/* Cabecera del día */}
+                { }
                 <div className="flex items-center gap-3 px-4 py-3 border-b border-[#252640]/60">
                   <span className="w-24 text-sm font-bold text-[#e8e9f3]">{d.label}</span>
                   <span className="text-xs text-[#6b6d8a]">
@@ -407,7 +399,7 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
                   </span>
                 </div>
 
-                {/* Slots del día */}
+                { }
                 {d.slots.length === 0 ? (
                   <div className="px-4 py-3 text-xs text-[#6b6d8a] italic">No disponible</div>
                 ) : (
@@ -417,20 +409,20 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
                         key={s.id}
                         className="flex items-center gap-3 px-4 py-3"
                       >
-                        {/* Estado */}
+                        { }
                         <div className={cn(
                           'w-2 h-2 rounded-full flex-shrink-0',
                           s.isAvailable ? 'bg-emerald-400' : 'bg-[#6b6d8a]'
                         )} />
 
-                        {/* Horario */}
+                        { }
                         <span className="text-sm font-mono text-[#e8e9f3] flex-1">
                           {fmt12(s.startTime)}
                           <span className="text-[#6b6d8a] mx-1">–</span>
                           {fmt12(s.endTime)}
                         </span>
 
-                        {/* Badge disponible/no disponible */}
+                        { }
                         <span className={cn(
                           'text-[10px] px-2 py-0.5 rounded-full border font-semibold',
                           s.isAvailable
@@ -440,7 +432,7 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
                           {s.isAvailable ? 'Disponible' : 'No disponible'}
                         </span>
 
-                        {/* Acciones */}
+                        { }
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => openEdit(s)}
@@ -482,7 +474,6 @@ function MyAvailabilityView({ professionalId }: { professionalId: number }) {
   );
 }
 
-// ─── Export principal: detecta rol y muestra la vista correspondiente ─────────
 export default function AvailabilityPage({
   publicProfessionalId,
   publicProfessionalName,
@@ -494,7 +485,6 @@ export default function AvailabilityPage({
   const [myProfessionalId, setMyProfessionalId] = useState<number | null>(null);
   const [loadingId, setLoadingId] = useState(false);
 
-  // Si es profesional y no hay ID público pasado, cargar su propio ID
   useEffect(() => {
     if (role !== 'PROFESSIONAL' || publicProfessionalId) return;
     if (!userId) return;
@@ -502,12 +492,11 @@ export default function AvailabilityPage({
     import('../api').then(({ professionalsApi }) =>
       professionalsApi.me()
         .then(p => setMyProfessionalId(p.id))
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoadingId(false))
     );
   }, [role, userId, publicProfessionalId]);
 
-  // Vista pública (pasada desde fuera)
   if (publicProfessionalId && publicProfessionalName) {
     return (
       <PublicAvailabilityView
@@ -517,7 +506,6 @@ export default function AvailabilityPage({
     );
   }
 
-  // Vista del profesional logueado
   if (role === 'PROFESSIONAL') {
     if (loadingId) {
       return (
@@ -541,7 +529,6 @@ export default function AvailabilityPage({
     return <MyAvailabilityView professionalId={myProfessionalId} />;
   }
 
-  // Cliente sin ID público → pantalla vacía informativa
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8 text-[#6b6d8a]">
       <div className="text-5xl">📅</div>

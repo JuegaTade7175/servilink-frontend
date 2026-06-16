@@ -12,14 +12,12 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8081',
 });
 
-// Inyectar JWT en cada request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('sl_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Si el backend devuelve 401, limpiar sesión
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -35,7 +33,6 @@ api.interceptors.response.use(
   }
 );
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
   login: (data: LoginRequest) =>
     api.post<AuthResponse>('/api/auth/login', data).then((r) => r.data),
@@ -43,7 +40,6 @@ export const authApi = {
     api.post<AuthResponse>('/api/auth/register', data).then((r) => r.data),
 };
 
-// ─── Users ────────────────────────────────────────────────────────────────────
 export const usersApi = {
   me: () =>
     api.get<User>('/api/users/me').then((r) => r.data),
@@ -55,10 +51,6 @@ export const usersApi = {
     api.delete<User>('/api/users/profile-picture').then((r) => r.data),
 };
 
-// ─── Professionals ────────────────────────────────────────────────────────────
-// El backend devuelve ProfessionalResponse que incluye:
-//   specialty, description, baseRate, coverageRadiusKm, certifications
-// NO incluye: bio, yearsOfExperience, hourlyRate, categoryId
 export const professionalsApi = {
   nearby: (lat: number, lon: number, radius = 10, categoryId?: number) =>
     api
@@ -70,22 +62,16 @@ export const professionalsApi = {
   getById: (id: number) =>
     api.get<Professional>(`/api/professionals/${id}`).then((r) => r.data),
 
-  // GET /api/professionals/me — requiere rol PROFESSIONAL
   me: () =>
     api.get<Professional>('/api/professionals/me').then((r) => r.data),
 
-  // POST /api/professionals/profile — crea el perfil profesional
   createProfile: (data: CreateProfessionalRequest) =>
     api.post<Professional>('/api/professionals/profile', data).then((r) => r.data),
 
-  // PUT /api/professionals/profile — actualiza el perfil profesional
-  // Campos válidos según el backend: specialty, description, latitude, longitude,
-  // address, coverageRadiusKm, baseRate, certifications
   updateProfile: (data: UpdateProfessionalRequest) =>
     api.put<Professional>('/api/professionals/profile', data).then((r) => r.data),
 };
 
-// ─── Map ──────────────────────────────────────────────────────────────────────
 export const mapApi = {
   geoPoints: (lat: number, lon: number, radius = 10, categoryId?: number) =>
     api
@@ -101,7 +87,6 @@ export const mapApi = {
       .then((r) => r.data),
 };
 
-// ─── Categories ───────────────────────────────────────────────────────────────
 export const categoriesApi = {
   getAll: () => api.get<Category[]>('/api/categories').then((r) => r.data),
   getById: (id: number) =>
@@ -110,11 +95,6 @@ export const categoriesApi = {
     api.get<ServiceItem[]>(`/api/categories/${id}/services`).then((r) => r.data),
 };
 
-// ─── Bookings ─────────────────────────────────────────────────────────────────
-// El backend devuelve BookingResponse con:
-//   id, clientId, clientName, professionalId, professionalName,
-//   serviceId, serviceName, scheduledAt, address, description, status, createdAt
-// NO tiene "notes" ni "totalPrice"
 export const bookingsApi = {
   create: (data: CreateBookingRequest) =>
     api.post<Booking>('/api/bookings', data).then((r) => r.data),
@@ -126,7 +106,6 @@ export const bookingsApi = {
     api
       .patch<Booking>(`/api/bookings/${id}/status`, { status })
       .then((r) => r.data),
-  // GET /api/bookings/professional?professionalId=X
   byProfessional: (professionalId: number) =>
     api
       .get<Booking[]>('/api/bookings/professional', {
@@ -135,7 +114,6 @@ export const bookingsApi = {
       .then((r) => r.data),
 };
 
-// ─── Confirmations ────────────────────────────────────────────────────────────
 export const confirmationsApi = {
   generate: (bookingId: number) =>
     api
@@ -155,7 +133,6 @@ export const confirmationsApi = {
       .then((r) => r.data),
 };
 
-// ─── Messages ─────────────────────────────────────────────────────────────────
 export const messagesApi = {
   send: (bookingId: number, content: string) =>
     api
@@ -173,7 +150,6 @@ export const messagesApi = {
       .then((r) => r.data),
 };
 
-// ─── Notifications ────────────────────────────────────────────────────────────
 export const notificationsApi = {
   getAll: () =>
     api.get<Notification[]>('/api/notifications').then((r) => r.data),
@@ -187,7 +163,6 @@ export const notificationsApi = {
     api.patch('/api/notifications/read-all').then((r) => r.data),
 };
 
-// ─── Payments ─────────────────────────────────────────────────────────────────
 export const paymentsApi = {
   process: (bookingId: number, amount: number, method: PaymentMethod) =>
     api
@@ -197,7 +172,6 @@ export const paymentsApi = {
     api.get<Payment>(`/api/payments/booking/${bookingId}`).then((r) => r.data),
 };
 
-// ─── Reviews ──────────────────────────────────────────────────────────────────
 export const reviewsApi = {
   create: (bookingId: number, rating: number, comment: string) =>
     api
@@ -209,9 +183,6 @@ export const reviewsApi = {
       .then((r) => r.data),
 };
 
-// ─── Availability ─────────────────────────────────────────────────────────────
-// CORREGIDO: el prefijo correcto es /api/availability/... (no /availability/...)
-// El backend espera startTime/endTime como "HH:mm" al crear, pero devuelve "HH:mm:ss"
 export const availabilityApi = {
   getByProfessional: (id: number) =>
     api

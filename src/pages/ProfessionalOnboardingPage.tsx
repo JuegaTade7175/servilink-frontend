@@ -17,17 +17,17 @@ interface Props {
 }
 
 export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
-  const [specialty, setSpecialty]           = useState('');
-  const [description, setDescription]       = useState('');
-  const [baseRate, setBaseRate]             = useState('');
+  const [specialty, setSpecialty] = useState('');
+  const [description, setDescription] = useState('');
+  const [baseRate, setBaseRate] = useState('');
   const [coverageRadius, setCoverageRadius] = useState('10');
   const [certifications, setCertifications] = useState('');
-  const [lat, setLat]                       = useState('');
-  const [lng, setLng]                       = useState('');
-  const [address, setAddress]               = useState('');
-  const [loading, setLoading]               = useState(false);
-  const [err, setErr]                       = useState('');
-  const [locating, setLocating]             = useState(false);
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  const [address, setAddress] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  const [locating, setLocating] = useState(false);
 
   const useMyLocation = () => {
     if (!navigator.geolocation) { setErr('Geolocalización no disponible'); return; }
@@ -77,7 +77,7 @@ export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
         transition={{ duration: 0.5 }}
         className="w-full max-w-lg"
       >
-        {/* Header */}
+        { }
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">🛠️</div>
           <h1
@@ -100,7 +100,7 @@ export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
           className="rounded-2xl border border-[#252640] p-7 space-y-4"
           style={{ background: '#1a1b2e' }}
         >
-          {/* Especialidad */}
+          { }
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">
               Especialidad *
@@ -113,7 +113,7 @@ export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
             />
           </div>
 
-          {/* Descripción */}
+          { }
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">
               Descripción
@@ -127,7 +127,7 @@ export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
             />
           </div>
 
-          {/* Tarifa y radio */}
+          { }
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">
@@ -158,7 +158,7 @@ export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
             </div>
           </div>
 
-          {/* Certificaciones */}
+          { }
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">
               Certificaciones
@@ -171,7 +171,7 @@ export default function ProfessionalOnboardingPage({ onCompleted }: Props) {
             />
           </div>
 
-          {/* Ubicación */}
+          { }
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">

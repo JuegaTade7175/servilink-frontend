@@ -15,7 +15,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
 import type { Professional, Notification, User, Review, Role } from './types';
 
-// Fix Leaflet default icons
 L.Marker.prototype.options.icon = L.icon({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
@@ -30,7 +29,6 @@ function cn(...c: (string | false | undefined | null)[]) {
   return c.filter(Boolean).join(' ');
 }
 
-// ─── Auth Page ────────────────────────────────────────────────────────────────
 function AuthPage() {
   const { login } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -182,7 +180,6 @@ function AuthPage() {
   );
 }
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
 function Avatar({ name, url, size = 'md' }: { name: string; url?: string; size?: 'sm' | 'md' | 'lg' }) {
   const colors = ['bg-indigo-500', 'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-violet-500'];
   const color = colors[name.charCodeAt(0) % colors.length];
@@ -206,7 +203,6 @@ function Stars({ r }: { r: number }) {
   );
 }
 
-// ─── Map View ─────────────────────────────────────────────────────────────────
 function MapView() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [selected, setSelected] = useState<Professional | null>(null);
@@ -344,7 +340,6 @@ function MapView() {
   );
 }
 
-// ─── Professionals View ───────────────────────────────────────────────────────
 function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Professional) => void }) {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -427,7 +422,6 @@ function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Pro
   );
 }
 
-// ─── Profile View ─────────────────────────────────────────────────────────────
 function ProfileView() {
   const { logout, userName, userEmail, role, userId } = useAuth();
   const [user, setUser] = useState<User | null>(null);
@@ -477,7 +471,7 @@ function ProfileView() {
     try {
       const updated = await usersApi.removePhoto();
       setUser(updated);
-    } catch { /* silent */ }
+    } catch { }
   };
 
   if (loadingUser) {
@@ -589,7 +583,6 @@ function ProfileView() {
   );
 }
 
-// ─── Notifications Panel ──────────────────────────────────────────────────────
 function NotificationsPanel({ onClose }: { onClose: () => void }) {
   const [notifs, setNotifs] = useState<Notification[]>([]);
 
@@ -649,7 +642,6 @@ function NotificationsPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── App Shell ────────────────────────────────────────────────────────────────
 function AppShell() {
   const { isAuthenticated, userName, role } = useAuth();
   const [view, setView] = useState<View>('map');
@@ -657,21 +649,17 @@ function AppShell() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<{ id: number; name: string } | null>(null);
 
-  // ─── Onboarding state ──────────────────────────────────────────────────────
-  // null = todavía verificando, false = no necesita onboarding, true = necesita
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
 
-  // Verificar si el profesional recién logueado ya tiene perfil
   useEffect(() => {
     if (!isAuthenticated) { setNeedsOnboarding(null); return; }
     if (role !== 'PROFESSIONAL') { setNeedsOnboarding(false); return; }
 
     professionalsApi.me()
-      .then(() => setNeedsOnboarding(false))   // ya tiene perfil → sin onboarding
-      .catch(() => setNeedsOnboarding(true));   // 404 o error → necesita crear perfil
+      .then(() => setNeedsOnboarding(false))
+      .catch(() => setNeedsOnboarding(true));
   }, [isAuthenticated, role]);
 
-  // Polling unread cada 30s
   useEffect(() => {
     if (!isAuthenticated) return;
     const fetchUnread = () =>
@@ -686,10 +674,8 @@ function AppShell() {
     messagesApi.unreadCount().then(d => setUnread(prev => prev + d.unreadCount)).catch(() => { });
   }, [isAuthenticated]);
 
-  // ── No autenticado
   if (!isAuthenticated) return <AuthPage />;
 
-  // ── Verificando si necesita onboarding (solo para PROFESSIONAL)
   if (role === 'PROFESSIONAL' && needsOnboarding === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0c0d14]">
@@ -701,7 +687,6 @@ function AppShell() {
     );
   }
 
-  // ── Profesional sin perfil → onboarding
   if (role === 'PROFESSIONAL' && needsOnboarding === true) {
     return (
       <ProfessionalOnboardingPage
@@ -724,7 +709,7 @@ function AppShell() {
 
   return (
     <div data-theme="dark" className="h-screen flex flex-col overflow-hidden bg-[var(--bg)]">
-      {/* Topbar */}
+      { }
       <header className="h-14 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between px-5 shrink-0 z-50">
         <div className="flex items-center gap-2.5">
           <span className="text-xl">🔗</span>
@@ -778,7 +763,7 @@ function AppShell() {
         </div>
       </header>
 
-      {/* Main */}
+      { }
       <main className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
@@ -812,7 +797,7 @@ function AppShell() {
         </AnimatePresence>
       </main>
 
-      {/* Notifications overlay */}
+      { }
       <AnimatePresence>
         {showNotifs && (
           <>
@@ -825,7 +810,6 @@ function AppShell() {
   );
 }
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>

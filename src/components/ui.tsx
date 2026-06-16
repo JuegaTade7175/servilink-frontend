@@ -1,11 +1,9 @@
 import { type ReactNode } from 'react';
 
-// ─── Utility ──────────────────────────────────────────────────────────────────
 function cn(...classes: (string | undefined | false | null)[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
 const AVATAR_COLORS = [
   'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
   'bg-amber-500', 'bg-red-500', 'bg-violet-500',
@@ -60,7 +58,6 @@ export function Avatar({
   );
 }
 
-// ─── Stars ────────────────────────────────────────────────────────────────────
 export function Stars({ rating, max = 5 }: { rating: number; max?: number }) {
   const filled = Math.max(0, Math.min(max, Math.round(rating || 0)));
   return (
@@ -71,13 +68,12 @@ export function Stars({ rating, max = 5 }: { rating: number; max?: number }) {
   );
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-  PENDING:     { label: 'Pendiente',    cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
-  CONFIRMED:   { label: 'Confirmado',   cls: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
-  IN_PROGRESS: { label: 'En progreso',  cls: 'bg-violet-500/15 text-violet-400 border-violet-500/30' },
-  COMPLETED:   { label: 'Completado',   cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
-  CANCELLED:   { label: 'Cancelado',    cls: 'bg-red-500/15 text-red-400 border-red-500/30' },
+  PENDING: { label: 'Pendiente', cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+  CONFIRMED: { label: 'Confirmado', cls: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
+  IN_PROGRESS: { label: 'En progreso', cls: 'bg-violet-500/15 text-violet-400 border-violet-500/30' },
+  COMPLETED: { label: 'Completado', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+  CANCELLED: { label: 'Cancelado', cls: 'bg-red-500/15 text-red-400 border-red-500/30' },
 };
 
 export function StatusBadge({ status, size = 'sm' }: { status: string; size?: 'xs' | 'sm' | 'md' }) {
@@ -93,7 +89,6 @@ export function StatusBadge({ status, size = 'sm' }: { status: string; size?: 'x
   );
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
 export function Modal({
   open,
   onClose,
@@ -138,7 +133,6 @@ export function Modal({
   );
 }
 
-// ─── Spinner ──────────────────────────────────────────────────────────────────
 export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const sz = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-8 h-8' : 'w-6 h-6';
   return (
@@ -151,7 +145,6 @@ export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   );
 }
 
-// ─── Empty State ──────────────────────────────────────────────────────────────
 export function EmptyState({
   icon,
   title,
@@ -173,7 +166,6 @@ export function EmptyState({
   );
 }
 
-// ─── Card ─────────────────────────────────────────────────────────────────────
 export function Card({
   children,
   className,
@@ -202,7 +194,6 @@ export function Card({
   );
 }
 
-// ─── Input ────────────────────────────────────────────────────────────────────
 export function Input({
   label,
   error,
@@ -234,7 +225,6 @@ export function Input({
   );
 }
 
-// ─── Select ───────────────────────────────────────────────────────────────────
 export function Select({
   label,
   error,
@@ -269,7 +259,6 @@ export function Select({
   );
 }
 
-// ─── Textarea ─────────────────────────────────────────────────────────────────
 export function Textarea({
   label,
   error,
@@ -301,7 +290,6 @@ export function Textarea({
   );
 }
 
-// ─── Button ───────────────────────────────────────────────────────────────────
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
@@ -355,7 +343,6 @@ export function Button({
   );
 }
 
-// ─── Section Label ────────────────────────────────────────────────────────────
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a] mb-2">
@@ -364,7 +351,6 @@ export function SectionLabel({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Info Grid ────────────────────────────────────────────────────────────────
 export function InfoGrid({ items }: { items: { icon: string; label: string; value: string }[] }) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -380,7 +366,6 @@ export function InfoGrid({ items }: { items: { icon: string; label: string; valu
   );
 }
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
 export function Toast({
   message,
   type = 'info',

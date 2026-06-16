@@ -4,7 +4,6 @@ import { bookingsApi, messagesApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import type { Booking, Message } from '../types';
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
 function cn(...c: (string | false | undefined | null)[]) {
   return c.filter(Boolean).join(' ');
 }
@@ -24,7 +23,6 @@ function fmtDay(iso: string) {
   return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-/** Agrupa mensajes por día */
 function groupByDay(messages: Message[]) {
   const groups: { label: string; messages: Message[] }[] = [];
   let currentDay = '';
@@ -40,18 +38,17 @@ function groupByDay(messages: Message[]) {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING:     'text-amber-400',
-  CONFIRMED:   'text-sky-400',
+  PENDING: 'text-amber-400',
+  CONFIRMED: 'text-sky-400',
   IN_PROGRESS: 'text-violet-400',
-  COMPLETED:   'text-emerald-400',
-  CANCELLED:   'text-red-400',
+  COMPLETED: 'text-emerald-400',
+  CANCELLED: 'text-red-400',
 };
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pendiente', CONFIRMED: 'Confirmada',
   IN_PROGRESS: 'En progreso', COMPLETED: 'Completada', CANCELLED: 'Cancelada',
 };
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ name, size = 'md' }: { name?: string; size?: 'sm' | 'md' | 'lg' }) {
   const safeName = name || 'Usuario';
   const COLORS = ['bg-indigo-500', 'bg-pink-500', 'bg-teal-500', 'bg-amber-500', 'bg-violet-500', 'bg-emerald-500'];
@@ -65,13 +62,11 @@ function Avatar({ name, size = 'md' }: { name?: string; size?: 'sm' | 'md' | 'lg
   );
 }
 
-// ─── Spinner ──────────────────────────────────────────────────────────────────
 function Spinner({ size = 'md' }: { size?: 'sm' | 'md' }) {
   const sz = size === 'sm' ? 'w-4 h-4' : 'w-6 h-6';
   return <div className={cn(sz, 'rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin')} />;
 }
 
-// ─── Booking List Item ────────────────────────────────────────────────────────
 function BookingItem({
   booking,
   selected,
@@ -105,7 +100,7 @@ function BookingItem({
         <div className={cn(
           'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0e0f1a]',
           booking.status === 'CANCELLED' ? 'bg-red-500' :
-          booking.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-[#6c63ff]'
+            booking.status === 'COMPLETED' ? 'bg-emerald-500' : 'bg-[#6c63ff]'
         )} />
       </div>
 
@@ -134,7 +129,6 @@ function BookingItem({
   );
 }
 
-// ─── Message Bubble ───────────────────────────────────────────────────────────
 function MessageBubble({
   msg,
   isMine,
@@ -151,7 +145,7 @@ function MessageBubble({
       transition={{ duration: 0.18, ease: 'easeOut' }}
       className={cn('flex items-end gap-2', isMine ? 'flex-row-reverse' : 'flex-row')}
     >
-      {/* Avatar placeholder para alinear */}
+      { }
       <div className="w-7 flex-shrink-0">
         {!isMine && showAvatar && <Avatar name={msg.senderName} size="sm" />}
       </div>
@@ -183,7 +177,6 @@ function MessageBubble({
   );
 }
 
-// ─── Typing Indicator ─────────────────────────────────────────────────────────
 function TypingIndicator({ name }: { name: string }) {
   return (
     <div className="flex items-end gap-2">
@@ -202,7 +195,6 @@ function TypingIndicator({ name }: { name: string }) {
   );
 }
 
-// ─── Chat Window ──────────────────────────────────────────────────────────────
 function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserId: number }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -224,7 +216,6 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
       const data = await messagesApi.getByBooking(booking.id);
       setMessages(data);
       if (!silent) setLoading(false);
-      // Si llegaron nuevos mensajes, scroll
       if (data.length > lastCountRef.current) {
         lastCountRef.current = data.length;
         setTimeout(() => scrollToBottom('smooth'), 60);
@@ -234,25 +225,22 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
     }
   }, [booking.id, scrollToBottom]);
 
-  // Carga inicial + marcar leídos
   useEffect(() => {
     setLoading(true);
     setMessages([]);
     lastCountRef.current = 0;
     fetchMessages(false).then(() => {
-      messagesApi.markAsRead(booking.id).catch(() => {});
+      messagesApi.markAsRead(booking.id).catch(() => { });
     });
     inputRef.current?.focus();
   }, [booking.id, fetchMessages]);
 
-  // Scroll al cargar
   useEffect(() => {
     if (!loading && messages.length > 0) {
       scrollToBottom('instant');
     }
   }, [loading, scrollToBottom]);
 
-  // Polling cada 3 segundos
   useEffect(() => {
     pollingRef.current = setInterval(() => fetchMessages(true), 3000);
     return () => {
@@ -264,7 +252,6 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
     const content = input.trim();
     if (!content || sending) return;
 
-    // Optimistic update
     const optimistic: Message = {
       id: Date.now(),
       bookingId: booking.id,
@@ -287,7 +274,6 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
       const saved = await messagesApi.send(booking.id, content);
       setMessages(prev => prev.map(m => m.id === optimistic.id ? saved : m));
     } catch (e: unknown) {
-      // Revert optimistic
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       lastCountRef.current -= 1;
       setError(e instanceof Error ? e.message : 'Error al enviar');
@@ -312,7 +298,7 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      { }
       <div className="flex-shrink-0 flex items-center gap-3 px-5 py-4 border-b border-[#252640] bg-[#0e0f1a]">
         <Avatar name={otherName} size="md" />
         <div className="flex-1 min-w-0">
@@ -333,7 +319,7 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
         </div>
       </div>
 
-      {/* Messages */}
+      { }
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1" style={{ scrollbarWidth: 'thin' }}>
         {loading ? (
           <div className="flex justify-center items-center h-full">
@@ -355,7 +341,7 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
           <>
             {groups.map((group, gi) => (
               <div key={gi}>
-                {/* Day separator */}
+                { }
                 <div className="flex items-center gap-3 my-4">
                   <div className="flex-1 h-px bg-[#252640]" />
                   <span className="text-[10px] font-semibold text-[#6b6d8a] bg-[#0c0d14] px-2 py-0.5 rounded-full border border-[#252640]">
@@ -369,7 +355,6 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
                     const isMine = msg.senderId === currentUserId;
                     const prev = group.messages[i - 1];
                     const showAvatar = !prev || prev.senderId !== msg.senderId;
-                    // Add gap when sender changes
                     const addGap = prev && prev.senderId !== msg.senderId;
                     return (
                       <div key={msg.id} className={addGap ? 'mt-3' : ''}>
@@ -387,7 +372,7 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
         <div ref={bottomRef} className="h-1" />
       </div>
 
-      {/* Error */}
+      { }
       <AnimatePresence>
         {error && (
           <motion.div
@@ -402,7 +387,7 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
         )}
       </AnimatePresence>
 
-      {/* Input */}
+      { }
       {booking.status !== 'CANCELLED' ? (
         <div className="flex-shrink-0 px-4 py-3 border-t border-[#252640] bg-[#0e0f1a]">
           <div className="flex items-end gap-2.5">
@@ -412,7 +397,6 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
                 value={input}
                 onChange={e => {
                   setInput(e.target.value);
-                  // Auto-resize
                   e.target.style.height = 'auto';
                   e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
                 }}
@@ -460,7 +444,6 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
   );
 }
 
-// ─── Empty state (no booking selected) ───────────────────────────────────────
 function EmptyChat() {
   return (
     <div className="flex flex-col items-center justify-center h-full gap-5 text-center p-8">
@@ -496,7 +479,6 @@ function EmptyChat() {
   );
 }
 
-// ─── Main ChatPage ────────────────────────────────────────────────────────────
 export default function ChatPage() {
   const { userId } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -505,9 +487,8 @@ export default function ChatPage() {
   const [lastMessages, setLastMessages] = useState<Record<number, Message>>({});
   const [unreadCounts, setUnreadCounts] = useState<Record<number, number>>({});
   const [search, setSearch] = useState('');
-  const [showList, setShowList] = useState(true); // para mobile
+  const [showList, setShowList] = useState(true);
 
-  // Cargar reservas activas (con mensajes)
   useEffect(() => {
     bookingsApi.myBookings()
       .then(data => {
@@ -516,7 +497,6 @@ export default function ChatPage() {
           setLoading(false);
           return;
         }
-        // Solo reservas no canceladas primero, luego canceladas
         const sorted = [...data].sort((a, b) => {
           if (a.status === 'CANCELLED' && b.status !== 'CANCELLED') return 1;
           if (b.status === 'CANCELLED' && a.status !== 'CANCELLED') return -1;
@@ -524,11 +504,10 @@ export default function ChatPage() {
         });
         setBookings(sorted);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
-  // Cargar preview del último mensaje de cada reserva
   useEffect(() => {
     if (!Array.isArray(bookings) || bookings.length === 0) return;
     const activeBookings = bookings.filter(b => b.status !== 'CANCELLED').slice(0, 10);
@@ -555,7 +534,6 @@ export default function ChatPage() {
   const handleSelect = (b: Booking) => {
     setSelected(b);
     setShowList(false);
-    // Limpiar contador de no leídos al abrir
     setUnreadCounts(prev => ({ ...prev, [b.id]: 0 }));
   };
 
@@ -573,14 +551,13 @@ export default function ChatPage() {
   return (
     <div className="flex h-full bg-[#0c0d14] overflow-hidden">
 
-      {/* ─── Sidebar de conversaciones ─────────────────────────────────── */}
+      { }
       <div className={cn(
         'flex flex-col border-r border-[#252640] bg-[#0e0f1a] transition-all duration-200',
-        // En mobile se oculta cuando hay chat abierto
         'w-full sm:w-[300px] md:w-[320px] flex-shrink-0',
         !showList && 'hidden sm:flex sm:flex-col'
       )}>
-        {/* Header sidebar */}
+        { }
         <div className="flex-shrink-0 px-4 pt-5 pb-3 border-b border-[#252640]">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -599,7 +576,7 @@ export default function ChatPage() {
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Polling activo" />
           </div>
 
-          {/* Buscador */}
+          { }
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6b6d8a]" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
@@ -613,7 +590,7 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Lista */}
+        { }
         <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
           {loading ? (
             <div className="flex justify-center py-12"><Spinner /></div>
@@ -647,7 +624,7 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Footer info */}
+        { }
         <div className="flex-shrink-0 px-4 py-3 border-t border-[#252640]">
           <p className="text-[10px] text-[#6b6d8a] text-center leading-relaxed">
             💬 Chat REST · actualización cada 3s
@@ -655,7 +632,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* ─── Panel de chat ─────────────────────────────────────────────── */}
+      { }
       <div className={cn(
         'flex-1 overflow-hidden',
         showList && 'hidden sm:block'
@@ -670,7 +647,7 @@ export default function ChatPage() {
               transition={{ duration: 0.15 }}
               className="h-full flex flex-col"
             >
-              {/* Back button mobile */}
+              { }
               <div className="sm:hidden flex-shrink-0 px-3 py-2 border-b border-[#252640] bg-[#0e0f1a]">
                 <button
                   onClick={() => setShowList(true)}
@@ -703,7 +680,7 @@ export default function ChatPage() {
         </AnimatePresence>
       </div>
 
-      {/* Keyframes para typing dots */}
+      { }
       <style>{`
         @keyframes bounce {
           0%, 60%, 100% { transform: translateY(0); }

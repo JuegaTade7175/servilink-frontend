@@ -43,9 +43,6 @@ function fmtDate(iso: string) {
   });
 }
 
-// ─── Sección: Perfil profesional ──────────────────────────────────────────────
-// Corregido para usar los campos reales de ProfessionalResponse del backend:
-// specialty, description, baseRate, coverageRadiusKm, certifications, latitude, longitude
 function ProfileSection({ onUpdated }: { onUpdated: (p: Professional) => void }) {
   const [profile, setProfile] = useState<Professional | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +50,6 @@ function ProfileSection({ onUpdated }: { onUpdated: (p: Professional) => void })
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [editing, setEditing] = useState(false);
 
-  // Campos del formulario — alineados con UpdateProfessionalRequest del backend
   const [specialty, setSpecialty] = useState('');
   const [description, setDescription] = useState('');
   const [baseRate, setBaseRate] = useState('');
@@ -80,7 +76,7 @@ function ProfileSection({ onUpdated }: { onUpdated: (p: Professional) => void })
         setLat(String(p.latitude ?? ''));
         setLng(String(p.longitude ?? ''));
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -133,7 +129,6 @@ function ProfileSection({ onUpdated }: { onUpdated: (p: Professional) => void })
         </div>
 
         {!editing ? (
-          // Vista de lectura — todos los campos de ProfessionalResponse
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { label: 'Especialidad', value: profile?.specialty || '—' },
@@ -153,7 +148,6 @@ function ProfileSection({ onUpdated }: { onUpdated: (p: Professional) => void })
             ))}
           </div>
         ) : (
-          // Formulario de edición — campos de UpdateProfessionalRequest
           <div className="space-y-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a]">Especialidad</label>
@@ -263,7 +257,6 @@ function ProfileSection({ onUpdated }: { onUpdated: (p: Professional) => void })
   );
 }
 
-// ─── Sección: Reservas recibidas ──────────────────────────────────────────────
 function ReceivedBookingsSection({ professionalId }: { professionalId: number }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -381,7 +374,7 @@ function ReceivedBookingsSection({ professionalId }: { professionalId: number })
                         )}
                       </div>
 
-                      {/* Acciones según estado */}
+                      { }
                       {b.status === 'PENDING' && (
                         <div className="flex gap-2 flex-shrink-0">
                           <button
@@ -430,7 +423,6 @@ function ReceivedBookingsSection({ professionalId }: { professionalId: number })
   );
 }
 
-// ─── Sub-componente inline de horarios ────────────────────────────────────────
 import { availabilityApi } from '../api';
 import type { Availability, DayOfWeek } from '../types';
 
@@ -444,7 +436,6 @@ const DAYS_MAP: { value: DayOfWeek; label: string; short: string }[] = [
   { value: 'SUNDAY', label: 'Domingo', short: 'Dom' },
 ];
 
-// El backend devuelve "HH:mm:ss" — convertir a "8:00 AM"
 function fmt12(t: string) {
   const [h, m] = t.split(':').map(Number);
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
@@ -458,7 +449,6 @@ function AvailabilityInline({ professionalId }: { professionalId: number }) {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
-  // form
   const [day, setDay] = useState<DayOfWeek>('MONDAY');
   const [start, setStart] = useState('08:00');
   const [end, setEnd] = useState('18:00');
@@ -475,7 +465,7 @@ function AvailabilityInline({ professionalId }: { professionalId: number }) {
     availabilityApi
       .getByProfessional(professionalId)
       .then(setSlots)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, [professionalId]);
 
@@ -494,7 +484,6 @@ function AvailabilityInline({ professionalId }: { professionalId: number }) {
   const openEdit = (s: Availability) => {
     setEditing(s);
     setDay(s.dayOfWeek);
-    // El backend devuelve "HH:mm:ss", necesitamos "HH:mm" para el input time
     setStart(s.startTime.slice(0, 5));
     setEnd(s.endTime.slice(0, 5));
     setAvail(s.isAvailable);
@@ -629,7 +618,7 @@ function AvailabilityInline({ professionalId }: { professionalId: number }) {
         )}
       </div>
 
-      {/* Modal */}
+      { }
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
@@ -749,7 +738,6 @@ function AvailabilityInline({ professionalId }: { professionalId: number }) {
   );
 }
 
-// ─── Export principal ─────────────────────────────────────────────────────────
 type Tab = 'profile' | 'bookings' | 'availability';
 
 export default function ProfessionalDashboardPage() {
@@ -762,7 +750,7 @@ export default function ProfessionalDashboardPage() {
     professionalsApi
       .me()
       .then(setProfessional)
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingProf(false));
   }, []);
 

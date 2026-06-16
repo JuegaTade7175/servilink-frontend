@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { bookingsApi, messagesApi, notificationsApi, professionalsApi } from '../api';
 import type { Booking, Message, Notification, Professional } from '../types';
 
-// ─── useBookings ──────────────────────────────────────────────────────────────
 export function useBookings() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +25,6 @@ export function useBookings() {
   return { bookings, loading, error, refetch: fetch };
 }
 
-// ─── useMessages ──────────────────────────────────────────────────────────────
 export function useMessages(bookingId: number | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,7 +49,6 @@ export function useMessages(bookingId: number | null) {
   return { messages, loading, refetch: fetch, addMessage };
 }
 
-// ─── useNotifications ─────────────────────────────────────────────────────────
 export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -85,7 +82,6 @@ export function useNotifications() {
   return { notifications, unreadCount, fetchAll, markAllRead };
 }
 
-// ─── useProfessionals ─────────────────────────────────────────────────────────
 export function useProfessionals(lat: number, lon: number, radius = 10) {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(false);

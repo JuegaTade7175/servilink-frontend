@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
 @import "tailwindcss";
+
 @plugin "daisyui" {
   themes: false;
 }
@@ -46,7 +47,6 @@ body {
   color: var(--text);
 }
 
-/* DaisyUI theme override — forzar dark */
 [data-theme] {
   --b1: 13 14 20;
   --b2: 19 20 31;
@@ -68,24 +68,59 @@ body {
   --wac: 13 14 20;
 }
 
-/* Scrollbar custom */
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar {
+  width: 5px;
+}
 
-/* Animaciones */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
-}
-@keyframes ping-slow {
-  0%   { transform: scale(1); opacity: 0.8; }
-  100% { transform: scale(2); opacity: 0; }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.fade-up  { animation: fadeUp 0.3s ease both; }
-.pulse    { animation: pulse 2s infinite; }
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes ping-slow {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.3s ease both;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}

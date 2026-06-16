@@ -16,29 +16,28 @@ function fmtDateTime(s: string) {
 }
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: string; desc: string }[] = [
-  { value: 'CARD',          label: 'Tarjeta',       icon: '💳', desc: 'Visa, Mastercard, Amex' },
-  { value: 'YAPE',          label: 'Yape',          icon: '📱', desc: 'Pago con QR instantáneo' },
+  { value: 'CARD', label: 'Tarjeta', icon: '💳', desc: 'Visa, Mastercard, Amex' },
+  { value: 'YAPE', label: 'Yape', icon: '📱', desc: 'Pago con QR instantáneo' },
   { value: 'BANK_TRANSFER', label: 'Transferencia', icon: '🏦', desc: 'BCP, Interbank, BBVA' },
 ];
 
 const STATUS_FILTERS: { value: BookingStatus | 'ALL'; label: string; icon: string }[] = [
-  { value: 'ALL',         label: 'Todas',       icon: '📋' },
-  { value: 'PENDING',     label: 'Pendientes',  icon: '⏳' },
-  { value: 'CONFIRMED',   label: 'Confirmadas', icon: '✅' },
+  { value: 'ALL', label: 'Todas', icon: '📋' },
+  { value: 'PENDING', label: 'Pendientes', icon: '⏳' },
+  { value: 'CONFIRMED', label: 'Confirmadas', icon: '✅' },
   { value: 'IN_PROGRESS', label: 'En progreso', icon: '🔧' },
-  { value: 'COMPLETED',   label: 'Completadas', icon: '🎉' },
-  { value: 'CANCELLED',   label: 'Canceladas',  icon: '❌' },
+  { value: 'COMPLETED', label: 'Completadas', icon: '🎉' },
+  { value: 'CANCELLED', label: 'Canceladas', icon: '❌' },
 ];
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
-  PENDING:     { label: 'Pendiente',   cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
-  CONFIRMED:   { label: 'Confirmado',  cls: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
+  PENDING: { label: 'Pendiente', cls: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
+  CONFIRMED: { label: 'Confirmado', cls: 'bg-sky-500/15 text-sky-400 border-sky-500/30' },
   IN_PROGRESS: { label: 'En progreso', cls: 'bg-violet-500/15 text-violet-400 border-violet-500/30' },
-  COMPLETED:   { label: 'Completado',  cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
-  CANCELLED:   { label: 'Cancelado',   cls: 'bg-red-500/15 text-red-400 border-red-500/30' },
+  COMPLETED: { label: 'Completado', cls: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' },
+  CANCELLED: { label: 'Cancelado', cls: 'bg-red-500/15 text-red-400 border-red-500/30' },
 };
 
-// ─── Micro UI ─────────────────────────────────────────────────────────────────
 function SLabel({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] font-bold uppercase tracking-widest text-[#6b6d8a] mb-2">{children}</p>;
 }
@@ -103,11 +102,11 @@ function Btn({ onClick, disabled, loading, variant = 'primary', size = 'md', ico
   children?: React.ReactNode; className?: string;
 }) {
   const V = {
-    primary:   'bg-[#6c63ff] hover:bg-[#5b54e8] text-white border-transparent',
+    primary: 'bg-[#6c63ff] hover:bg-[#5b54e8] text-white border-transparent',
     secondary: 'bg-[#252640] hover:bg-[#2e2f52] text-[#e8e9f3] border-[#252640]',
-    danger:    'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30',
-    ghost:     'bg-transparent hover:bg-white/5 text-[#6b6d8a] hover:text-[#e8e9f3] border-transparent',
-    success:   'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border-emerald-500/30',
+    danger: 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30',
+    ghost: 'bg-transparent hover:bg-white/5 text-[#6b6d8a] hover:text-[#e8e9f3] border-transparent',
+    success: 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border-emerald-500/30',
   }[variant];
   const S = { xs: 'text-[11px] px-2.5 py-1 rounded-lg', sm: 'text-xs px-3 py-1.5 rounded-lg', md: 'text-sm px-4 py-2.5 rounded-xl', lg: 'text-sm px-5 py-3 rounded-xl' }[size];
   return (
@@ -122,13 +121,12 @@ function Btn({ onClick, disabled, loading, variant = 'primary', size = 'md', ico
 function ToastMsg({ msg, type }: { msg: string; type: 'success' | 'error' | 'info' }) {
   const cfg = {
     success: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
-    error:   'bg-red-500/20 border-red-500/40 text-red-300',
-    info:    'bg-[#6c63ff]/20 border-[#6c63ff]/40 text-[#a09bff]',
+    error: 'bg-red-500/20 border-red-500/40 text-red-300',
+    info: 'bg-[#6c63ff]/20 border-[#6c63ff]/40 text-[#a09bff]',
   }[type];
   return <div className={cn('fixed bottom-6 right-6 z-[3000] flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold shadow-2xl', cfg)}>{msg}</div>;
 }
 
-// ─── Create Modal ─────────────────────────────────────────────────────────────
 function CreateModal({ open, onClose, onCreated }: {
   open: boolean; onClose: () => void; onCreated: (b: Booking) => void;
 }) {
@@ -148,7 +146,7 @@ function CreateModal({ open, onClose, onCreated }: {
     setForm({ scheduledAt: '', address: '', description: '' });
     setLoadingPros(true);
     professionalsApi.nearby(-12.0464, -77.0428, 30)
-      .then(setPros).catch(() => {}).finally(() => setLoadingPros(false));
+      .then(setPros).catch(() => { }).finally(() => setLoadingPros(false));
   }, [open]);
 
   const filtered = pros.filter(p =>
@@ -171,23 +169,23 @@ function CreateModal({ open, onClose, onCreated }: {
   };
 
   const stepLabels = ['Profesional', 'Servicio', 'Detalles'];
-  const stepKeys   = ['pro', 'service', 'details'];
+  const stepKeys = ['pro', 'service', 'details'];
 
   return (
     <Modal open={open} onClose={onClose} title="Nueva reserva" wide>
-      {/* Progress */}
+      { }
       <div className="flex items-center gap-0 mb-6">
         {stepLabels.map((label, i) => {
           const key = stepKeys[i];
           const currentIdx = stepKeys.indexOf(step);
-          const done   = i < currentIdx;
+          const done = i < currentIdx;
           const active = i === currentIdx;
           return (
             <div key={key} className="flex items-center flex-1">
               <div className="flex flex-col items-center gap-1 flex-1">
                 <div className={cn('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all',
                   done ? 'bg-[#6c63ff] border-[#6c63ff] text-white' :
-                  active ? 'border-[#6c63ff] text-[#6c63ff]' : 'border-[#252640] text-[#6b6d8a]')}>
+                    active ? 'border-[#6c63ff] text-[#6c63ff]' : 'border-[#252640] text-[#6b6d8a]')}>
                   {done ? '✓' : i + 1}
                 </div>
                 <span className={cn('text-[10px] font-semibold',
@@ -206,25 +204,25 @@ function CreateModal({ open, onClose, onCreated }: {
               className="w-full bg-[#13141f] border border-[#252640] focus:border-[#6c63ff]/60 rounded-xl px-4 py-2.5 text-sm text-[#e8e9f3] placeholder-[#6b6d8a] outline-none transition-colors" />
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {loadingPros ? <div className="flex justify-center py-8"><Spinner /></div>
-              : filtered.length === 0 ? <p className="text-center text-[#6b6d8a] text-sm py-8">Sin resultados</p>
-              : filtered.map(p => (
-                <div key={p.id} onClick={() => { setPro(p); setStep('service'); }}
-                  className="flex items-start gap-3 p-3 bg-[#13141f] border border-[#252640] rounded-xl cursor-pointer hover:border-[#6c63ff]/40 hover:bg-[#1a1b2e] transition-all">
-                  <Avatar name={p.userName} url={p.profilePictureUrl} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-sm truncate">{p.userName}</span>
-                      {p.isVerified && <span className="text-emerald-400 text-xs">✓</span>}
+                : filtered.length === 0 ? <p className="text-center text-[#6b6d8a] text-sm py-8">Sin resultados</p>
+                  : filtered.map(p => (
+                    <div key={p.id} onClick={() => { setPro(p); setStep('service'); }}
+                      className="flex items-start gap-3 p-3 bg-[#13141f] border border-[#252640] rounded-xl cursor-pointer hover:border-[#6c63ff]/40 hover:bg-[#1a1b2e] transition-all">
+                      <Avatar name={p.userName} url={p.profilePictureUrl} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-semibold text-sm truncate">{p.userName}</span>
+                          {p.isVerified && <span className="text-emerald-400 text-xs">✓</span>}
+                        </div>
+                        <div className="text-xs text-[#6c63ff] font-medium">{p.specialty}</div>
+                        <div className="flex items-center gap-3 mt-1">
+                          <Stars r={p.averageRating} />
+                          <span className="text-[10px] text-[#6b6d8a]">{(p.averageRating ?? 0).toFixed(1)} ({p.totalReviews})</span>
+                          <span className="text-xs font-bold text-emerald-400">S/. {p.baseRate}/hr</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-[#6c63ff] font-medium">{p.specialty}</div>
-                    <div className="flex items-center gap-3 mt-1">
-                      <Stars r={p.averageRating} />
-                      <span className="text-[10px] text-[#6b6d8a]">{(p.averageRating ?? 0).toFixed(1)} ({p.totalReviews})</span>
-                      <span className="text-xs font-bold text-emerald-400">S/. {p.baseRate}/hr</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  ))}
             </div>
           </motion.div>
         )}
@@ -296,7 +294,6 @@ function CreateModal({ open, onClose, onCreated }: {
   );
 }
 
-// ─── Payment Modal ────────────────────────────────────────────────────────────
 function PaymentModal({ open, onClose, booking, onPaid }: {
   open: boolean; onClose: () => void; booking: Booking | null; onPaid: (p: Payment) => void;
 }) {
@@ -353,7 +350,6 @@ function PaymentModal({ open, onClose, booking, onPaid }: {
   );
 }
 
-// ─── Confirmation Modal ───────────────────────────────────────────────────────
 function ConfirmationModal({ open, onClose, booking, confirmation, onRefresh }: {
   open: boolean; onClose: () => void; booking: Booking | null;
   confirmation: BookingConfirmation | null; onRefresh: () => void;
@@ -424,7 +420,6 @@ function ConfirmationModal({ open, onClose, booking, confirmation, onRefresh }: 
   );
 }
 
-// ─── Review Modal ─────────────────────────────────────────────────────────────
 function ReviewModal({ open, onClose, booking, onReviewed }: {
   open: boolean; onClose: () => void; booking: Booking | null; onReviewed: (r: Review) => void;
 }) {
@@ -472,7 +467,6 @@ function ReviewModal({ open, onClose, booking, onReviewed }: {
   );
 }
 
-// ─── Detail Panel ─────────────────────────────────────────────────────────────
 function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: Booking) => void }) {
   const [updating, setUpdating] = useState<string | null>(null);
   const [payment, setPayment] = useState<Payment | null>(null);
@@ -515,15 +509,15 @@ function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: 
 
   type ActionDef = { label: string; icon: string; status: string; variant: 'primary' | 'success' | 'danger' };
   const actions: ActionDef[] = ({
-    PENDING:     [{ label: 'Confirmar', icon: '✅', status: 'CONFIRMED',   variant: 'success' },
-                  { label: 'Cancelar',  icon: '❌', status: 'CANCELLED',   variant: 'danger'  }],
-    CONFIRMED:   [{ label: 'Iniciar',   icon: '🔧', status: 'IN_PROGRESS', variant: 'primary' },
-                  { label: 'Cancelar',  icon: '❌', status: 'CANCELLED',   variant: 'danger'  }],
-    IN_PROGRESS: [{ label: 'Completar', icon: '🎉', status: 'COMPLETED',   variant: 'success' }],
+    PENDING: [{ label: 'Confirmar', icon: '✅', status: 'CONFIRMED', variant: 'success' },
+    { label: 'Cancelar', icon: '❌', status: 'CANCELLED', variant: 'danger' }],
+    CONFIRMED: [{ label: 'Iniciar', icon: '🔧', status: 'IN_PROGRESS', variant: 'primary' },
+    { label: 'Cancelar', icon: '❌', status: 'CANCELLED', variant: 'danger' }],
+    IN_PROGRESS: [{ label: 'Completar', icon: '🎉', status: 'COMPLETED', variant: 'success' }],
   } as Record<string, ActionDef[]>)[booking.status] ?? [];
 
-  const canPay    = booking.status !== 'CANCELLED' && !payment;
-  const canConf   = booking.status === 'PENDING' || booking.status === 'CONFIRMED';
+  const canPay = booking.status !== 'CANCELLED' && !payment;
+  const canConf = booking.status === 'PENDING' || booking.status === 'CONFIRMED';
   const existingReview = reviews.find(r => r.bookingId === booking.id);
   const canReview = booking.status === 'COMPLETED' && !existingReview;
 
@@ -532,7 +526,7 @@ function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: 
       {toast && <ToastMsg msg={toast.msg} type={toast.type} />}
       <div className="p-6 space-y-5 max-w-2xl mx-auto">
 
-        {/* Header */}
+        { }
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="font-black text-xl text-[#e8e9f3]">{booking.serviceName}</h2>
@@ -541,12 +535,12 @@ function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: 
           <StatusBadge status={booking.status} size="md" />
         </div>
 
-        {/* Info */}
+        { }
         <div className="grid grid-cols-2 gap-2">
           <Field label="👤 Profesional" value={booking.professionalName} />
-          <Field label="👥 Cliente"     value={booking.clientName} />
-          <Field label="📅 Fecha"       value={fmtDateTime(booking.scheduledAt)} />
-          <Field label="🕐 Creado"      value={fmtDate(booking.createdAt)} />
+          <Field label="👥 Cliente" value={booking.clientName} />
+          <Field label="📅 Fecha" value={fmtDateTime(booking.scheduledAt)} />
+          <Field label="🕐 Creado" value={fmtDate(booking.createdAt)} />
           <div className="col-span-2"><Field label="📍 Dirección" value={booking.address} /></div>
         </div>
 
@@ -557,7 +551,7 @@ function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: 
           </div>
         )}
 
-        {/* Acciones de estado */}
+        { }
         {actions.length > 0 && (
           <div>
             <SLabel>Cambiar estado</SLabel>
@@ -570,54 +564,54 @@ function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: 
           </div>
         )}
 
-        {/* Pago */}
+        { }
         <div>
           <SLabel>Pago</SLabel>
           {loadingExtra ? <div className="flex justify-center py-4"><Spinner /></div>
-          : payment ? (
-            <div className="flex items-center justify-between p-4 bg-[#13141f] rounded-xl border border-[#252640]">
-              <div>
-                <div className="font-bold text-emerald-400 text-lg">S/. {Number(payment.amount).toFixed(2)}</div>
-                <div className="text-xs text-[#6b6d8a]">{PAYMENT_METHODS.find(m => m.value === payment.method)?.label ?? payment.method} · {payment.transactionId}</div>
-                <div className="text-xs text-[#6b6d8a]">{payment.paidAt ? fmtDateTime(payment.paidAt) : '—'}</div>
+            : payment ? (
+              <div className="flex items-center justify-between p-4 bg-[#13141f] rounded-xl border border-[#252640]">
+                <div>
+                  <div className="font-bold text-emerald-400 text-lg">S/. {Number(payment.amount).toFixed(2)}</div>
+                  <div className="text-xs text-[#6b6d8a]">{PAYMENT_METHODS.find(m => m.value === payment.method)?.label ?? payment.method} · {payment.transactionId}</div>
+                  <div className="text-xs text-[#6b6d8a]">{payment.paidAt ? fmtDateTime(payment.paidAt) : '—'}</div>
+                </div>
+                <span className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5 font-semibold">{payment.status}</span>
               </div>
-              <span className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full px-2 py-0.5 font-semibold">{payment.status}</span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-3 bg-[#13141f] rounded-xl border border-[#252640]">
-              <p className="text-sm text-[#6b6d8a]">Sin pago registrado</p>
-              {canPay && <Btn variant="primary" size="sm" icon="💳" onClick={() => setShowPay(true)}>Pagar</Btn>}
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-between p-3 bg-[#13141f] rounded-xl border border-[#252640]">
+                <p className="text-sm text-[#6b6d8a]">Sin pago registrado</p>
+                {canPay && <Btn variant="primary" size="sm" icon="💳" onClick={() => setShowPay(true)}>Pagar</Btn>}
+              </div>
+            )}
         </div>
 
-        {/* Confirmación */}
+        { }
         <div>
           <SLabel>Confirmación de cita</SLabel>
           {loadingExtra ? <div className="flex justify-center py-4"><Spinner /></div>
-          : (
-            <div className="flex items-center justify-between p-3 bg-[#13141f] rounded-xl border border-[#252640]">
-              <div>
-                {confirmation ? (
-                  <>
-                    <span className={cn('text-xs font-bold',
-                      confirmation.status === 'CONFIRMED' ? 'text-emerald-400' :
-                      confirmation.status === 'PENDING'   ? 'text-amber-400'   : 'text-[#6b6d8a]')}>
-                      {confirmation.status === 'CONFIRMED' ? '✅ Confirmada' :
-                       confirmation.status === 'PENDING'   ? '⏳ Pendiente'  : `⚠️ ${confirmation.status}`}
-                    </span>
-                    {confirmation.status === 'PENDING' && (
-                      <p className="text-[10px] text-[#6b6d8a] mt-0.5 font-mono font-black tracking-widest">{confirmation.confirmationCode}</p>
-                    )}
-                  </>
-                ) : <p className="text-sm text-[#6b6d8a]">Sin código generado</p>}
+            : (
+              <div className="flex items-center justify-between p-3 bg-[#13141f] rounded-xl border border-[#252640]">
+                <div>
+                  {confirmation ? (
+                    <>
+                      <span className={cn('text-xs font-bold',
+                        confirmation.status === 'CONFIRMED' ? 'text-emerald-400' :
+                          confirmation.status === 'PENDING' ? 'text-amber-400' : 'text-[#6b6d8a]')}>
+                        {confirmation.status === 'CONFIRMED' ? '✅ Confirmada' :
+                          confirmation.status === 'PENDING' ? '⏳ Pendiente' : `⚠️ ${confirmation.status}`}
+                      </span>
+                      {confirmation.status === 'PENDING' && (
+                        <p className="text-[10px] text-[#6b6d8a] mt-0.5 font-mono font-black tracking-widest">{confirmation.confirmationCode}</p>
+                      )}
+                    </>
+                  ) : <p className="text-sm text-[#6b6d8a]">Sin código generado</p>}
+                </div>
+                {canConf && <Btn variant="secondary" size="sm" icon="🔐" onClick={() => setShowConf(true)}>Gestionar</Btn>}
               </div>
-              {canConf && <Btn variant="secondary" size="sm" icon="🔐" onClick={() => setShowConf(true)}>Gestionar</Btn>}
-            </div>
-          )}
+            )}
         </div>
 
-        {/* Reseña */}
+        { }
         {booking.status === 'COMPLETED' && (
           <div>
             <SLabel>Reseña</SLabel>
@@ -636,21 +630,20 @@ function DetailPanel({ booking, onUpdated }: { booking: Booking; onUpdated: (b: 
         )}
       </div>
 
-      <PaymentModal      open={showPay}    onClose={() => setShowPay(false)}    booking={booking} onPaid={p => { setPayment(p); showT('Pago procesado exitosamente'); }} />
-      <ConfirmationModal open={showConf}   onClose={() => setShowConf(false)}   booking={booking} confirmation={confirmation} onRefresh={() => { loadExtra(); showT('Actualizado'); }} />
-      <ReviewModal       open={showReview} onClose={() => setShowReview(false)} booking={booking} onReviewed={r => { setReviews(p => [...p, r]); showT('¡Reseña enviada!'); }} />
+      <PaymentModal open={showPay} onClose={() => setShowPay(false)} booking={booking} onPaid={p => { setPayment(p); showT('Pago procesado exitosamente'); }} />
+      <ConfirmationModal open={showConf} onClose={() => setShowConf(false)} booking={booking} confirmation={confirmation} onRefresh={() => { loadExtra(); showT('Actualizado'); }} />
+      <ReviewModal open={showReview} onClose={() => setShowReview(false)} booking={booking} onReviewed={r => { setReviews(p => [...p, r]); showT('¡Reseña enviada!'); }} />
     </div>
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BookingsPage() {
-  const [bookings, setBookings]   = useState<Booking[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [filter, setFilter]       = useState<BookingStatus | 'ALL'>('ALL');
-  const [selected, setSelected]   = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<BookingStatus | 'ALL'>('ALL');
+  const [selected, setSelected] = useState<Booking | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [toast, setToast]         = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const showT = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type }); setTimeout(() => setToast(null), 3000);
@@ -666,9 +659,9 @@ export default function BookingsPage() {
   useEffect(() => { load(); }, [load]);
 
   const filtered = filter === 'ALL' ? bookings : bookings.filter(b => b.status === filter);
-  const counts   = bookings.reduce<Record<string, number>>((a, b) => {
+  const counts = bookings.reduce<Record<string, number>>((a, b) => {
     a[b.status] = (a[b.status] ?? 0) + 1;
-    a['ALL']    = (a['ALL']    ?? 0) + 1;
+    a['ALL'] = (a['ALL'] ?? 0) + 1;
     return a;
   }, {});
 
@@ -679,7 +672,7 @@ export default function BookingsPage() {
     <div className="flex h-full bg-[#0c0d14]">
       {toast && <ToastMsg msg={toast.msg} type={toast.type} />}
 
-      {/* Sidebar */}
+      { }
       <div className="w-[340px] flex-shrink-0 flex flex-col border-r border-[#252640] bg-[#0e0f1a] overflow-hidden">
         <div className="px-5 pt-5 pb-4 border-b border-[#252640] flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
@@ -691,7 +684,7 @@ export default function BookingsPage() {
           </div>
           <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {STATUS_FILTERS.map(({ value, label, icon }) => {
-              const count  = counts[value] ?? 0;
+              const count = counts[value] ?? 0;
               const active = filter === value;
               return (
                 <button key={value} onClick={() => setFilter(value)}
@@ -741,7 +734,7 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      {/* Detail */}
+      { }
       <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
           {selected ? (
