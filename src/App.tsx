@@ -1,27 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-import BookingsPage from './pages/BookingsPage';
-import ProfessionalDashboardPage from './pages/ProfessionalDashboardPage';
-import AvailabilityPage from './pages/AvailabilityPage';
-import ProfessionalOnboardingPage from './pages/ProfessionalOnboardingPage';
-import ChatPage from './pages/ChatPage';
+
+const BookingsPage = lazy(() => import('./pages/BookingsPage'));
+const ProfessionalDashboardPage = lazy(() => import('./pages/ProfessionalDashboardPage'));
+const AvailabilityPage = lazy(() => import('./pages/AvailabilityPage'));
+const ProfessionalOnboardingPage = lazy(() => import('./pages/ProfessionalOnboardingPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const MapView = lazy(() => import('./pages/MapView'));
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
 import type { Professional, Notification, User, Review, Role } from './types';
 
-L.Marker.prototype.options.icon = L.icon({
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
+
 
 type View = 'map' | 'bookings' | 'professionals' | 'chat' | 'profile' | 'dashboard' | 'availability';
 
@@ -203,142 +194,7 @@ function Stars({ r }: { r: number }) {
   );
 }
 
-function MapView() {
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [selected, setSelected] = useState<Professional | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState<Review[]>([]);
 
-  useEffect(() => {
-    professionalsApi.nearby(-12.0464, -77.0428, 20)
-      .then(setProfessionals)
-      .catch(() => { })
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (!selected) return;
-    reviewsApi.byProfessional(selected.id).then(setReviews).catch(() => setReviews([]));
-  }, [selected]);
-
-  return (
-    <div className="flex h-full">
-      <div className="flex-1 relative">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#1a2035]/80 z-[1000] text-[var(--muted)]">
-            <div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin mr-3" />
-            Cargando...
-          </div>
-        )}
-        <MapContainer center={[-12.0464, -77.0428]} zoom={13} style={{ height: '100%', width: '100%' }}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          {professionals.filter(p => p.latitude && p.longitude).map(p => (
-            <Marker
-              key={p.id}
-              position={[p.latitude!, p.longitude!]}
-              eventHandlers={{ click: () => setSelected(p) }}
-            >
-              <Popup>
-                <div className="text-sm">
-                  <p className="font-bold">{p.userName}</p>
-                  <p style={{ color: '#6c63ff' }}>{p.specialty}</p>
-                  <p className="text-gray-500 text-xs">S/. {p.baseRate}/hr · ★{(p.averageRating ?? 0).toFixed(1)}</p>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur border border-[var(--border)] rounded-xl px-3 py-2 text-xs text-[var(--muted)] z-[1000]">
-          📍 Lima, Perú — Radio 20km
-        </div>
-      </div>
-
-      <div className="w-80 border-l border-[var(--border)] overflow-auto bg-[var(--surface)]">
-        <AnimatePresence mode="wait">
-          {selected ? (
-            <motion.div key="detail" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="p-5">
-              <button onClick={() => setSelected(null)} className="btn btn-ghost btn-sm text-[var(--muted)] mb-4">← Volver</button>
-              <div className="flex gap-3 items-start mb-4">
-                <Avatar name={selected.userName} url={selected.profilePictureUrl} size="lg" />
-                <div>
-                  <h3 className="font-bold">{selected.userName}</h3>
-                  <p className="text-[var(--accent)] text-sm">{selected.specialty}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Stars r={selected.averageRating} />
-                    <span className="text-xs text-[var(--muted)]">{(selected.averageRating ?? 0).toFixed(1)} ({selected.totalReviews})</span>
-                    {selected.isVerified && <span className="badge badge-success badge-xs">✓</span>}
-                  </div>
-                </div>
-              </div>
-              {selected.description && <p className="text-sm text-[var(--muted)] mb-4">{selected.description}</p>}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {[
-                  { l: 'Tarifa', v: `S/. ${selected.baseRate}/hr` },
-                  { l: 'Radio', v: `${selected.coverageRadiusKm ?? '?'} km` },
-                  { l: 'Distancia', v: selected.distanceKm ? `${selected.distanceKm.toFixed(1)} km` : '—' },
-                  { l: 'Teléfono', v: selected.userPhone ?? '—' },
-                ].map(({ l, v }) => (
-                  <div key={l} className="bg-[var(--card)] rounded-xl p-3">
-                    <div className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-1">{l}</div>
-                    <div className="font-bold text-sm">{v}</div>
-                  </div>
-                ))}
-              </div>
-              {selected.services.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-[10px] text-[var(--muted)] uppercase tracking-wider mb-2">Servicios</p>
-                  <div className="flex flex-col gap-1.5">
-                    {selected.services.map(s => (
-                      <div key={s.id} className="bg-[var(--card)] rounded-xl px-3 py-2 flex justify-between">
-                        <span className="text-sm">{s.name}</span>
-                        {s.referencePrice && <span className="font-bold text-[var(--accent)] text-sm">S/. {s.referencePrice}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {reviews.slice(0, 2).map(r => (
-                <div key={r.id} className="bg-[var(--card)] rounded-xl p-3 mb-2">
-                  <div className="flex justify-between mb-1">
-                    <span className="text-xs font-semibold">{r.clientName}</span>
-                    <Stars r={r.rating} />
-                  </div>
-                  {r.comment && <p className="text-xs text-[var(--muted)]">{r.comment}</p>}
-                </div>
-              ))}
-            </motion.div>
-          ) : (
-            <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-5">
-              <h2 className="font-black text-lg mb-1" style={{ fontFamily: 'var(--font-display)' }}>Profesionales</h2>
-              <p className="text-sm text-[var(--muted)] mb-4">{professionals.length} cerca de Lima</p>
-              <div className="flex flex-col gap-2">
-                {professionals.map(p => (
-                  <div
-                    key={p.id}
-                    onClick={() => setSelected(p)}
-                    className="card bg-[var(--card)] border border-[var(--border)] cursor-pointer p-3 hover:border-[#6c63ff]/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Avatar name={p.userName} url={p.profilePictureUrl} />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm truncate">{p.userName}</div>
-                        <div className="text-xs text-[var(--accent)]">{p.specialty}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs font-bold text-yellow-400">★ {(p.averageRating ?? 0).toFixed(1)}</div>
-                        <div className="text-xs text-[var(--muted)]">S/. {p.baseRate}/hr</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-}
 
 function ProfessionalsView({ onViewAvailability }: { onViewAvailability: (p: Professional) => void }) {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -815,7 +671,16 @@ function AppShell() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppShell />
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0c0d14]">
+          <div className="flex items-center gap-3 text-[#6b6d8a]">
+            <div className="w-6 h-6 rounded-full border-2 border-white/10 border-t-[#6c63ff] animate-spin" />
+            Cargando...
+          </div>
+        </div>
+      }>
+        <AppShell />
+      </Suspense>
     </AuthProvider>
   );
 }

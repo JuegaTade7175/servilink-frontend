@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { availabilityApi } from '../api';
+import { availabilityApi, professionalsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import type { Availability, DayOfWeek } from '../types';
 
@@ -489,12 +489,10 @@ export default function AvailabilityPage({
     if (role !== 'PROFESSIONAL' || publicProfessionalId) return;
     if (!userId) return;
     setLoadingId(true);
-    import('../api').then(({ professionalsApi }) =>
-      professionalsApi.me()
-        .then(p => setMyProfessionalId(p.id))
-        .catch(() => { })
-        .finally(() => setLoadingId(false))
-    );
+    professionalsApi.me()
+      .then(p => setMyProfessionalId(p.id))
+      .catch(() => { })
+      .finally(() => setLoadingId(false));
   }, [role, userId, publicProfessionalId]);
 
   if (publicProfessionalId && publicProfessionalName) {
