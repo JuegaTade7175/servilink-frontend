@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -447,7 +447,7 @@ function ProfileView() {
         }
       })
       .finally(() => setLoadingUser(false));
-  }, [userId]);
+  }, [role, userEmail, userId, userName]);
 
   const updatePhoto = async () => {
     if (!photoUrl.startsWith('https://')) {
@@ -471,7 +471,9 @@ function ProfileView() {
     try {
       const updated = await usersApi.removePhoto();
       setUser(updated);
-    } catch { }
+    } catch {
+      setPhotoErr('No se pudo eliminar la foto');
+    }
   };
 
   if (loadingUser) {

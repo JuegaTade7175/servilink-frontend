@@ -239,7 +239,7 @@ function ChatWindow({ booking, currentUserId }: { booking: Booking; currentUserI
     if (!loading && messages.length > 0) {
       scrollToBottom('instant');
     }
-  }, [loading, scrollToBottom]);
+  }, [loading, messages.length, scrollToBottom]);
 
   useEffect(() => {
     pollingRef.current = setInterval(() => fetchMessages(true), 3000);
