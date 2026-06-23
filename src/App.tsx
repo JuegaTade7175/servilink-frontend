@@ -9,8 +9,8 @@ const ProfessionalOnboardingPage = lazy(() => import('./pages/ProfessionalOnboar
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const MapView = lazy(() => import('./pages/MapView'));
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { authApi, professionalsApi, notificationsApi, usersApi, reviewsApi, messagesApi } from './api';
-import type { Professional, Notification, User, Review, Role } from './types';
+import { authApi, professionalsApi, notificationsApi, usersApi, messagesApi } from './api';
+import type { Professional, Notification, User, Role } from './types';
 
 
 
