@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { usersApi } from '../api';
 import type { AuthResponse, Role } from '../types';
 
 interface AuthContextType {
@@ -53,6 +54,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserEmail(null);
     setRole(null);
   }, []);
+
+  // Validate token on mount
+  useEffect(() => {
+    const validateToken = async () => {
+      if (token) {
+        try {
+          await usersApi.me();
+        } catch {
+          // Token is invalid, clear all auth data
+          logout();
+        }
+      }
+    };
+    validateToken();
+  }, [token, logout]);
 
   return (
     <AuthContext.Provider value={{

@@ -108,6 +108,7 @@ Vite tambien tiene configurado un proxy para `/api` hacia `http://localhost:8081
 | `npm run build` | Compila TypeScript y genera el build de produccion con Vite. |
 | `npm run lint` | Ejecuta ESLint sobre el proyecto. |
 | `npm run preview` | Sirve localmente el build generado. |
+| `npm run typecheck` | Ejecuta Typecheck sobre el proyecto. |
 
 ## Estructura del proyecto
 
